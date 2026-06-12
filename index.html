@@ -194,6 +194,7 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Beschreibung</label><input type="text" id="aus-desc" placeholder="z.B. Ersatzteile"></div>
         <div class="form-group"><label>Lieferant</label><input type="text" id="aus-lief"></div>
         <div class="form-group"><label>Kategorie</label><select id="aus-kat"><option value="">— wählen —</option><option>Löhne</option><option>Ersatzteile</option><option>Fahrzeugkosten</option><option>Werkzeug & Ausrüstung</option><option>Miete & Nebenkosten</option><option>Versicherung</option><option>Sonstiges</option></select></div>
+        <div class="form-group"><label>Mitarbeiter</label><select id="aus-ma"><option value="">— wählen —</option></select></div>
         <div class="form-group"><label>Menge / Stück</label><input type="number" id="aus-menge" placeholder="1" min="1" step="1" value="1" onchange="berechneAusBetrag()"></div>
         <div class="form-group"><label>Einzelpreis (CHF)</label><input type="number" id="aus-einzelpreis" placeholder="0.00" min="0" step="0.01" onchange="berechneAusBetrag()"></div>
         <div class="form-group"><label>Betrag Total (CHF)</label><input type="number" id="aus-betrag" placeholder="0.00" min="0" step="0.01" style="font-weight:700;background:#D5F5E3"></div>
@@ -211,7 +212,7 @@ tbody td{padding:8px 9px;}
     <div class="card">
       <div class="card-title">📋 Alle Ausgaben</div>
       <div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Datum</th><th>Beschreibung</th><th>Lieferant</th><th>Kategorie</th><th>Betrag</th><th>Bezahlt ↕</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Datum</th><th>Beschreibung</th><th>Mitarbeiter</th><th>Lieferant</th><th>Kategorie</th><th>Betrag</th><th>Bezahlt ↕</th><th></th></tr></thead>
         <tbody id="aus-tbody"><tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr></tbody>
       </table></div>
     </div>
@@ -447,6 +448,9 @@ async function renderMitarbeiter(){
   mas.forEach(m=>{const o=document.createElement('option');o.value=m.name;o.textContent=m.name+' ('+m.rang+')';sel.appendChild(o);});
   sel.value=cur;
   document.getElementById('stat-ma').textContent=mas.length;
+  // Sync ausgaben mitarbeiter dropdown
+  const ausSelMa=document.getElementById('aus-ma');
+  if(ausSelMa){const curAus=ausSelMa.value;ausSelMa.innerHTML='<option value="">— wählen —</option>';mas.forEach(m=>{const o=document.createElement('option');o.value=m.name;o.textContent=m.name+' ('+m.rang+')';ausSelMa.appendChild(o);});ausSelMa.value=curAus;}
   const list=document.getElementById('ma-list');
   if(!mas.length){list.innerHTML='<div style="color:#AAA;padding:14px;text-align:center">Keine Mitarbeiter</div>';return;}
   list.innerHTML=mas.map(m=>{
@@ -502,7 +506,7 @@ async function renderEinnahmen(){
 
 // ══ AUSGABEN ══
 async function addAusgabe(){
-  const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:parseFloat(document.getElementById('aus-betrag').value)||0,bezahlt:document.getElementById('aus-bez').value};
+  const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),mitarbeiter:document.getElementById('aus-ma')?.value||'',lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:parseFloat(document.getElementById('aus-betrag').value)||0,bezahlt:document.getElementById('aus-bez').value};
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
   await dbIns('ausgaben',r);
   // Firmenkonto abziehen wenn bezahlt
@@ -513,6 +517,7 @@ async function addAusgabe(){
   ['aus-desc','aus-lief','aus-betrag','aus-einzelpreis'].forEach(id=>document.getElementById(id).value='');
   const mengeEl=document.getElementById('aus-menge');if(mengeEl)mengeEl.value=1;
   const sel=document.getElementById('aus-ersatzteil');if(sel)sel.value='';
+  const ausMa=document.getElementById('aus-ma');if(ausMa)ausMa.value='';
   renderAll();
 }
 async function togAus(id){const a=(await dbGet('ausgaben')).find(x=>x.id===id);if(a)await dbUpd('ausgaben',id,{bezahlt:a.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
@@ -520,6 +525,7 @@ async function delAus(id){await dbDel('ausgaben',id);renderAll();}
 
 async function renderAusgaben(){
   const aus=await dbGet('ausgaben');
+  const mas=await dbGet('mitarbeiter');
   document.getElementById('stat-aus').textContent=fmt(aus.reduce((s,a)=>s+a.betrag,0));
   const tbody=document.getElementById('aus-tbody');
   if(!aus.length){tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr>';return;}
