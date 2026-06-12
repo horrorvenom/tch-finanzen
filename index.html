@@ -526,8 +526,7 @@ async function renderAuswertung(){
     const at=ein.filter(e=>e.mitarbeiter===m.name);
     const tot=at.reduce((s,e)=>s+e.betrag,0);
     const bez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
-    const totBez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
-      const p=totBez*(m.provision||0)/100;
+    const totBez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);const p=totBez*(m.provision||0)/100;
     const c=rc(m.rang);
     const ini=m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     return `<div class="ma-card"><div class="ma-card-header" style="background:${c}"><div class="ma-avatar">${ini}</div><div><div style="font-weight:700;font-size:13px">${m.name}</div><div style="font-size:10px;opacity:.85">${m.rang}</div></div></div><div class="ma-card-body"><div class="ma-stat"><span class="ma-stat-label">Aufträge</span><span class="ma-stat-value">${at.length}</span></div><div class="ma-stat"><span class="ma-stat-label">Einnahmen</span><span class="ma-stat-value" style="color:var(--green)">${fmt(tot)}</span></div><div class="ma-stat"><span class="ma-stat-label">Provision (${m.provision||0}%)</span><span class="ma-stat-value" style="color:var(--gold)">${fmt(p)}</span></div><div class="ma-stat"><span class="ma-stat-label">Bezahlt</span><span class="ma-stat-value" style="color:var(--green)">${fmt(bez)}</span></div><div class="ma-stat"><span class="ma-stat-label">Ausstehend</span><span class="ma-stat-value" style="color:var(--red)">${fmt(tot-bez)}</span></div>${m.lohn?`<div class="ma-stat"><span class="ma-stat-label">Monatslohn</span><span class="ma-stat-value">${fmt(m.lohn)}</span></div>`:''}</div></div>`;
@@ -548,7 +547,7 @@ async function renderMonat(){
   const tE=ein.reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
   const tL=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
-  const tP=mas.reduce((s,ma)=>{const me=ein.filter(e=>e.mitarbeiter===ma.name).reduce((ss,e)=>ss+e.betrag,0);return s+me*(ma.provision||0)/100;},0);
+  const tP=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
   const netto=tE-tA-tL-tP;
 
   document.getElementById('monat-stats').innerHTML=`
@@ -568,7 +567,7 @@ async function renderMonat(){
   let sL=0,sP=0,sA=0;
   const rows=mas.map(ma=>{
     const mE=ein.filter(e=>e.mitarbeiter===ma.name).reduce((s,e)=>s+e.betrag,0);
-    const p=mE*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
+    const mEBez2=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);const p=mEBez2*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
     sL+=l;sP+=p;sA+=a;
     const c=rc(ma.rang);
     return `<tr><td><strong>${ma.name}</strong></td><td><span style="background:${c};color:white;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${ma.rang}</span></td><td style="color:var(--green);font-weight:600">${fmt(mE)}</td><td><span class="badge badge-gold">${ma.provision||0}%</span></td><td style="color:var(--gold);font-weight:700">${fmt(p)}</td><td style="color:var(--blue);font-weight:600">${fmt(l)}</td><td style="font-weight:700;font-size:13px">${fmt(a)}</td></tr>`;
