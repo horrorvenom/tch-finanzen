@@ -388,7 +388,15 @@ async function dbGet(tbl){
 }
 async function dbIns(tbl,row){
   const s=sb();
-  if(s){const {data,error}=await s.from(tbl).insert(row).select().single();if(error)throw error;return data;}
+  if(s){
+    const {data,error}=await s.from(tbl).insert(row).select().single();
+    if(error){
+      console.error('DB Insert Error:', error.message, row);
+      // Fallback to local if supabase fails
+      const r={...row,id:Date.now()};if(!L[tbl])L[tbl]=[];L[tbl].unshift(r);sl();return r;
+    }
+    return data;
+  }
   const r={...row,id:Date.now()};if(!L[tbl])L[tbl]=[];L[tbl].unshift(r);sl();return r;
 }
 async function dbUpd(tbl,id,u){
@@ -512,7 +520,12 @@ async function addAusgabe(){
   const betragCalc = einzelpreis > 0 ? menge * einzelpreis : parseFloat(document.getElementById('aus-betrag').value) || 0;
   const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),mitarbeiter:document.getElementById('aus-ma')?.value||'',lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:betragCalc,bezahlt:document.getElementById('aus-bez').value};
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht. Bitte Einzelpreis eingeben.');return;}
-  await dbIns('ausgaben',r);
+  try {
+    await dbIns('ausgaben',r);
+  } catch(e) {
+    alert('Fehler beim Speichern: ' + e.message);
+    return;
+  }
   // Firmenkonto abziehen wenn bezahlt
   if(r.bezahlt==='Ja'){
     L.konto=(L.konto||0)-r.betrag;sl();
