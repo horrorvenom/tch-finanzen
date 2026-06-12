@@ -240,13 +240,9 @@ tbody td{padding:8px 9px;}
       </table></div>
     </div>
     <div class="ai-box">
-      <div class="ai-box-title">🤖 KI-Auswertung</div>
-      <div class="ai-messages" id="ai2"><div class="ai-msg assistant">Klick "Analysieren" für eine vollständige Auswertung.</div></div>
-      <div class="ai-input-row">
-        <input class="ai-input" id="ai-in2" placeholder="Frage..." onkeydown="if(event.key==='Enter')sendAI('ai-in2','ai2')">
-        <button class="btn btn-sm" style="background:var(--green);color:white" onclick="analyzeAll()">🔍 Analysieren</button>
-        <button class="btn btn-dark btn-sm" onclick="sendAI('ai-in2','ai2')">Fragen</button>
-      </div>
+      <div class="ai-box-title">📊 Vollständige Auswertung</div>
+      <div id="voll-analyse" style="color:#EEE;font-size:13px;line-height:1.8;min-height:60px;margin-bottom:10px">Klick auf "Vollanalyse" für alle Details.</div>
+      <button class="btn btn-sm" style="background:#1E8449;color:white" onclick="vollAnalyse()">🔍 Vollanalyse starten</button>
     </div>
   </div>
 
@@ -618,6 +614,120 @@ async function analyzeAll(){
     const d=await res.json();ld.textContent=d.content?.[0]?.text||'Keine Antwort.';
   }catch(e){ld.textContent='⚠️ Verbindungsfehler.';}
   box.scrollTop=9999;
+}
+
+
+// ══ LOKALE ANALYSE (ohne KI) ══
+async function lokalAnalyse(typ) {
+  const ein = await dbGet('einnahmen');
+  const aus = await dbGet('ausgaben');
+  const mas = await dbGet('mitarbeiter');
+  const el = document.getElementById('analyse-output');
+  
+  const tE = ein.reduce((s,e)=>s+e.betrag,0);
+  const tA = aus.reduce((s,a)=>s+a.betrag,0);
+  const tEBez = ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+  const tEAus = ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
+  const gv = tE - tA;
+
+  if(typ==='finanzen') {
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#1E844922;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#6ee08a">EINNAHMEN</div><div style="font-size:16px;font-weight:700;color:#6ee08a">${fmt(tE)}</div></div>
+        <div style="background:#C0392B22;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#f97c7c">AUSGABEN</div><div style="font-size:16px;font-weight:700;color:#f97c7c">${fmt(tA)}</div></div>
+        <div style="background:#D4A01722;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#ffc94d">GEWINN/VERLUST</div><div style="font-size:16px;font-weight:700;color:${gv>=0?'#6ee08a':'#f97c7c'}">${fmt(gv)}</div></div>
+        <div style="background:#1A527622;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#7cc4f9">KONTO</div><div style="font-size:16px;font-weight:700;color:#7cc4f9">${fmt(L.konto||0)}</div></div>
+      </div>
+      <div style="font-size:12px;color:#AAA">${ein.length} Einnahmen · ${aus.length} Ausgaben · ${mas.length} Mitarbeiter</div>`;
+  }
+
+  if(typ==='mitarbeiter') {
+    if(!mas.length){el.innerHTML='<span style="color:#AAA">Keine Mitarbeiter erfasst.</span>';return;}
+    el.innerHTML = mas.map(m=>{
+      const mE=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);
+      const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+      const prov=mEBez*(m.provision||0)/100;
+      const c=rc(m.rang);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #3A3A3C">
+        <span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></span>
+        <span style="flex:1;font-weight:600">${m.name}</span>
+        <span style="color:#AAA;font-size:11px">${m.rang}</span>
+        <span style="color:#6ee08a;font-weight:600">${fmt(mE)}</span>
+        ${prov>0?`<span style="color:#ffc94d;font-size:11px">Prov: ${fmt(prov)}</span>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  if(typ==='ausstehend') {
+    const ausst = ein.filter(e=>e.bezahlt==='Nein');
+    if(!ausst.length){el.innerHTML='<span style="color:#6ee08a">✅ Alle Rechnungen sind bezahlt!</span>';return;}
+    el.innerHTML = `<div style="color:#ffc94d;margin-bottom:8px;font-weight:600">${ausst.length} ausstehende Rechnungen — Total: ${fmt(tEAus)}</div>` +
+      ausst.slice(0,8).map(e=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #3A3A3C;font-size:12px">
+        <span>${fmtD(e.datum)} · ${e.beschreibung}</span>
+        <span style="color:#f97c7c;font-weight:600">${fmt(e.betrag)}</span>
+      </div>`).join('') + (ausst.length>8?`<div style="color:#AAA;font-size:11px;margin-top:4px">+${ausst.length-8} weitere...</div>`:'');
+  }
+
+  if(typ==='top') {
+    const sorted = [...ein].sort((a,b)=>b.betrag-a.betrag).slice(0,8);
+    if(!sorted.length){el.innerHTML='<span style="color:#AAA">Keine Einnahmen erfasst.</span>';return;}
+    el.innerHTML = `<div style="color:#ffc94d;margin-bottom:8px;font-weight:600">Top Einnahmen</div>` +
+      sorted.map((e,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #3A3A3C;font-size:12px">
+        <span style="color:#AAA;width:16px">${i+1}.</span>
+        <span style="flex:1">${e.beschreibung}${e.mitarbeiter?' · '+e.mitarbeiter:''}</span>
+        <span style="color:#6ee08a;font-weight:600">${fmt(e.betrag)}</span>
+        <span class="badge ${e.bezahlt==='Ja'?'badge-green':'badge-red'}">${e.bezahlt}</span>
+      </div>`).join('');
+  }
+}
+
+async function vollAnalyse() {
+  const ein = await dbGet('einnahmen');
+  const aus = await dbGet('ausgaben');
+  const mas = await dbGet('mitarbeiter');
+  const el = document.getElementById('voll-analyse');
+
+  const tE=ein.reduce((s,e)=>s+e.betrag,0);
+  const tA=aus.reduce((s,a)=>s+a.betrag,0);
+  const tEBez=ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+  const tEAus=ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
+  const gv=tE-tA;
+  const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
+  const tLohn=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
+
+  // Kategorie auswertung
+  const kats={};
+  ein.forEach(e=>{const k=e.kategorie||'Sonstiges';if(!kats[k])kats[k]=0;kats[k]+=e.betrag;});
+  const topKat=Object.entries(kats).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  // Top mitarbeiter
+  const maStats=mas.map(m=>({name:m.name,rang:m.rang,tot:ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0)})).sort((a,b)=>b.tot-a.tot);
+
+  el.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💰 Finanzen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div style="background:#1E844922;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#6ee08a">Einnahmen</div><div style="font-size:13px;font-weight:700;color:#6ee08a">${fmt(tE)}</div></div>
+        <div style="background:#C0392B22;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#f97c7c">Ausgaben</div><div style="font-size:13px;font-weight:700;color:#f97c7c">${fmt(tA)}</div></div>
+        <div style="background:#ffffff11;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#AAA">Netto</div><div style="font-size:13px;font-weight:700;color:${gv>=0?'#6ee08a':'#f97c7c'}">${fmt(gv)}</div></div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📋 Zahlungsstatus</div>
+      <div style="font-size:12px">Bezahlt: <strong style="color:#6ee08a">${fmt(tEBez)}</strong> · Ausstehend: <strong style="color:#f97c7c">${fmt(tEAus)}</strong></div>
+    </div>
+    ${topKat.length?`<div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📊 Top Kategorien</div>
+      ${topKat.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">${k}<strong style="color:#6ee08a">${fmt(v)}</strong></div>`).join('')}
+    </div>`:''}
+    ${maStats.length?`<div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">👥 Mitarbeiter Ranking</div>
+      ${maStats.map((m,i)=>`<div style="display:flex;gap:8px;font-size:12px;padding:3px 0"><span style="color:#AAA">${i+1}.</span><span style="flex:1">${m.name}</span><strong style="color:#6ee08a">${fmt(m.tot)}</strong></div>`).join('')}
+    </div>`:''}
+    <div>
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💼 Lohn & Provision</div>
+      <div style="font-size:12px">Löhne/Mt.: <strong style="color:#7cc4f9">${fmt(tLohn)}</strong> · Provisionen (bezahlt): <strong style="color:#ffc94d">${fmt(tProv)}</strong></div>
+    </div>`;
 }
 
 // ══ RENDER ALL ══
