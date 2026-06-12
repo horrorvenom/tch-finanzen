@@ -844,38 +844,61 @@ async function renderOffeneRechnungen() {
   const tot = document.getElementById('offen-total');
   if (!el) return;
   const ein = await dbGet('einnahmen');
-  const mas = await dbGet('mitarbeiter');
   const offen = ein.filter(e => e.bezahlt === 'Nein').sort((a,b) => new Date(a.datum) - new Date(b.datum));
   const totalOffen = offen.reduce((s,e) => s + e.betrag, 0);
+  const ueberfaellig = offen.filter(e => {
+    const tage = e.datum ? Math.floor((new Date() - new Date(e.datum)) / 86400000) : 0;
+    return tage > 7;
+  });
 
-  if (tot) tot.textContent = offen.length > 0
-    ? offen.length + ' offen · ' + fmt(totalOffen)
+  if (tot) tot.innerHTML = offen.length > 0
+    ? `<span>${offen.length} offen · <strong style="color:#f97c7c">${fmt(totalOffen)}</strong></span>${ueberfaellig.length > 0 ? ` <span style="background:#C0392B;color:white;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;margin-left:6px">⚠️ ${ueberfaellig.length} ÜBERFÄLLIG</span>` : ''}`
     : '';
 
   if (!offen.length) {
-    el.innerHTML = '<div style="color:#6ee08a;font-size:13px;text-align:center;padding:12px">✅ Alle Rechnungen sind bezahlt!</div>';
+    el.innerHTML = '<div style="color:#6ee08a;font-size:13px;text-align:center;padding:16px">✅ Alle Rechnungen sind bezahlt!</div>';
     return;
   }
 
-  el.innerHTML = offen.slice(0, 8).map(e => {
-    const ma = mas.find(m => m.name === e.mitarbeiter);
-    const c = ma ? rc(ma.rang) : '#555';
+  // Warnung oben wenn überfällig
+  const warnHtml = ueberfaellig.length > 0 ? `
+    <div style="background:rgba(192,57,43,0.25);border:1px solid #C0392B;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⚠️</span>
+      <div>
+        <div style="color:#f97c7c;font-weight:700;font-size:13px">${ueberfaellig.length} Rechnung${ueberfaellig.length>1?'en':''} seit über 7 Tagen unbezahlt!</div>
+        <div style="color:#AAA;font-size:11px;margin-top:2px">Total überfällig: <strong style="color:#f97c7c">${fmt(ueberfaellig.reduce((s,e)=>s+e.betrag,0))}</strong></div>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = warnHtml + offen.map(e => {
     const tage = e.datum ? Math.floor((new Date() - new Date(e.datum)) / 86400000) : 0;
-    const dringend = tage > 14;
-    return `<div style="display:flex;align-items:center;gap:10px;background:${dringend?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.05)'};border-radius:8px;padding:9px 12px;border-left:3px solid ${dringend?'#C0392B':'#D4A017'}">
+    const ueberfaelligItem = tage > 7;
+    const sehrAlt = tage > 30;
+    let borderColor = '#D4A017';
+    let bgColor = 'rgba(255,255,255,0.05)';
+    if (sehrAlt) { borderColor = '#922B21'; bgColor = 'rgba(192,57,43,0.2)'; }
+    else if (ueberfaelligItem) { borderColor = '#C0392B'; bgColor = 'rgba(192,57,43,0.1)'; }
+
+    return `<div style="display:flex;align-items:center;gap:10px;background:${bgColor};border-radius:8px;padding:10px 14px;border-left:4px solid ${borderColor};margin-bottom:6px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.beschreibung}</div>
-        <div style="font-size:11px;color:#AAA;margin-top:2px">
-          ${e.mitarbeiter ? `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:${c}"></span>${e.mitarbeiter}</span> · ` : ''}
-          ${fmtD(e.datum)}${tage > 0 ? ` · <span style="color:${dringend?'#f97c7c':'#ffc94d'}">${tage} Tage offen</span>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:white">${e.beschreibung}</span>
+          ${sehrAlt ? '<span style="background:#922B21;color:white;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600">SEHR ALT</span>' : ueberfaelligItem ? '<span style="background:#C0392B;color:white;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600">ÜBERFÄLLIG</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:#AAA;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">
+          ${e.kunde ? `<span>👤 <strong style="color:#EEE">${e.kunde}</strong></span>` : ''}
+          ${e.mitarbeiter ? `<span>🔧 ${e.mitarbeiter}</span>` : ''}
+          <span>📅 ${fmtD(e.datum)}</span>
+          ${tage > 0 ? `<span style="color:${sehrAlt?'#f97c7c':ueberfaelligItem?'#f97c7c':'#ffc94d'};font-weight:600">${tage} Tage offen</span>` : ''}
+          ${e.kategorie ? `<span style="background:#2C2C2E;padding:1px 6px;border-radius:4px">${e.kategorie}</span>` : ''}
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:700;color:#f97c7c">${fmt(e.betrag)}</div>
-        <button class="toggle-btn toggle-nein" onclick="togEin(${e.id})" style="margin-top:4px;font-size:10px">Als bezahlt markieren</button>
+        <div style="font-size:15px;font-weight:700;color:#f97c7c">${fmt(e.betrag)}</div>
+        <button onclick="togEin(${e.id})" style="margin-top:5px;background:#1E8449;color:white;border:none;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer">✓ Bezahlt</button>
       </div>
     </div>`;
-  }).join('') + (offen.length > 8 ? `<div style="color:#AAA;font-size:11px;text-align:center;padding:6px">+${offen.length - 8} weitere offene Rechnungen</div>` : '');
+  }).join('') + (offen.length > 10 ? `<div style="color:#AAA;font-size:11px;text-align:center;padding:6px">+${offen.length-10} weitere</div>` : '');
 }
 
 // ══ RENDER ALL ══
