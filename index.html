@@ -95,10 +95,7 @@ tbody td{padding:8px 9px;}
   <div class="login-box">
     <div class="login-logo">TCH</div>
     <div class="login-sub">Touring Club Helvetia — Finanz Manager</div>
-    <div class="login-role">
-      <button class="role-btn active" id="role-ceo" onclick="setRole('ceo')">👑 CEO</button>
-      <button class="role-btn" id="role-ma" onclick="setRole('ma')">👤 Mitarbeiter</button>
-    </div>
+    <div id="login-role-hint" style="text-align:center;font-size:12px;color:#AAA;margin-bottom:12px">Die Rolle wird automatisch anhand deiner E-Mail vergeben.</div>
     <input class="login-input" type="email" id="login-email" placeholder="E-Mail-Adresse">
     <input class="login-input" type="password" id="login-pass" placeholder="Passwort" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Anmelden</button>
@@ -290,6 +287,7 @@ tbody td{padding:8px 9px;}
 // ══ SUPABASE CONFIG ══
 const SB_URL = 'https://rbnrppheuvbmnlidcmei.supabase.co';
 const SB_KEY = 'sb_publishable_7A48mPikMbsGVrJOWJr98g_g2AtN1pF';
+const CEO_EMAIL = 'alper.star3@gmail.com';
 let _sb = null;
 function sb() { if(!_sb && SB_URL!=='') _sb=supabase.createClient(SB_URL,SB_KEY); return _sb; }
 
@@ -307,11 +305,7 @@ const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstatt
 const isCEO = () => CU?.role==='ceo';
 
 // ══ LOGIN ══
-function setRole(r) {
-  selRole=r;
-  document.getElementById('role-ceo').classList.toggle('active',r==='ceo');
-  document.getElementById('role-ma').classList.toggle('active',r==='ma');
-}
+function setRole(r) { selRole=r; }
 
 async function doLogin() {
   const email=document.getElementById('login-email').value.trim();
@@ -324,11 +318,11 @@ async function doLogin() {
     const {data,error}=await s.auth.signInWithPassword({email,password:pass});
     if(error){err.textContent='❌ '+error.message;return;}
     const {data:prof}=await s.from('profiles').select('*').eq('id',data.user.id).single();
-    CU={email,role:prof?.role||selRole,name:prof?.name||email};
+    CU={email,role:email===CEO_EMAIL?'ceo':(prof?.role||'ma'),name:prof?.name||email};
     await loadKonto();
   } else {
     // Demo
-    if(email==='ceo@tch.ch'&&pass==='tch2026'){CU={email,role:'ceo',name:'Momo Sinclair'};}
+    if(email===CEO_EMAIL){CU={email,role:'ceo',name:'Momo Sinclair'};}
     else {
       const ma=L.mitarbeiter.find(m=>m.email===email);
       if(ma&&pass.length>=4){CU={email,role:'ma',name:ma.name};}
@@ -344,6 +338,7 @@ async function doRegister() {
   const err=document.getElementById('login-err');
   const s=sb();
   if(!s){err.textContent='ℹ️ Supabase nötig. Demo: ceo@tch.ch / tch2026';return;}
+  const signupRole = email===CEO_EMAIL ? 'ceo' : 'ma';
   const {error}=await s.auth.signUp({email,password:pass});
   if(error){err.textContent='❌ '+error.message;}
   else{err.style.color='green';err.textContent='✅ Bestätigungsmail gesendet!';}
@@ -634,7 +629,7 @@ async function renderAll(){
 (async()=>{
   const s=sb();
   if(s){
-    const {data:{session}}=await s.auth.getSession();
+    const {data: sessionData}=await s.auth.getSession(); const session = sessionData?.session;
     if(session){const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).single();CU={email:session.user.email,role:p?.role||'ma',name:p?.name||session.user.email};await loadKonto();startApp();}
   }
 })();
