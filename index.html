@@ -194,7 +194,9 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Beschreibung</label><input type="text" id="aus-desc" placeholder="z.B. Ersatzteile"></div>
         <div class="form-group"><label>Lieferant</label><input type="text" id="aus-lief"></div>
         <div class="form-group"><label>Kategorie</label><select id="aus-kat"><option value="">— wählen —</option><option>Löhne</option><option>Ersatzteile</option><option>Fahrzeugkosten</option><option>Werkzeug & Ausrüstung</option><option>Miete & Nebenkosten</option><option>Versicherung</option><option>Sonstiges</option></select></div>
-        <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="aus-betrag" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group"><label>Menge / Stück</label><input type="number" id="aus-menge" placeholder="1" min="1" step="1" value="1" onchange="berechneAusBetrag()"></div>
+        <div class="form-group"><label>Einzelpreis (CHF)</label><input type="number" id="aus-einzelpreis" placeholder="0.00" min="0" step="0.01" onchange="berechneAusBetrag()"></div>
+        <div class="form-group"><label>Betrag Total (CHF)</label><input type="number" id="aus-betrag" placeholder="0.00" min="0" step="0.01" style="font-weight:700;background:#D5F5E3"></div>
         <div class="form-group"><label>Bezahlt</label><select id="aus-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
       <div style="margin-bottom:12px">
@@ -508,7 +510,8 @@ async function addAusgabe(){
     L.konto=(L.konto||0)-r.betrag;sl();
     const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:L.konto,notiz:'Ausgabe: '+r.beschreibung});
   }
-  ['aus-desc','aus-lief','aus-betrag'].forEach(id=>document.getElementById(id).value='');
+  ['aus-desc','aus-lief','aus-betrag','aus-einzelpreis'].forEach(id=>document.getElementById(id).value='');
+  const mengeEl=document.getElementById('aus-menge');if(mengeEl)mengeEl.value=1;
   const sel=document.getElementById('aus-ersatzteil');if(sel)sel.value='';
   renderAll();
 }
@@ -705,11 +708,20 @@ function onErsatzteilChange() {
   if (!val) return;
   const item = JSON.parse(val);
   document.getElementById('aus-desc').value = item.name;
-  document.getElementById('aus-betrag').value = item.preis;
+  document.getElementById('aus-einzelpreis').value = item.preis;
   document.getElementById('aus-kat').value = 'Ersatzteile';
-  // Highlight
-  document.getElementById('aus-betrag').style.borderColor = '#D4A017';
-  setTimeout(() => { document.getElementById('aus-betrag').style.borderColor = ''; }, 2000);
+  berechneAusBetrag();
+}
+
+function berechneAusBetrag() {
+  const menge = parseFloat(document.getElementById('aus-menge')?.value) || 1;
+  const einzelpreis = parseFloat(document.getElementById('aus-einzelpreis')?.value) || 0;
+  const total = menge * einzelpreis;
+  const betragEl = document.getElementById('aus-betrag');
+  if (betragEl) {
+    betragEl.value = total.toFixed(2);
+    betragEl.style.borderColor = total > 0 ? '#1E8449' : '#DDE';
+  }
 }
 
 async function addAusgabeAndDeductKonto(row) {
