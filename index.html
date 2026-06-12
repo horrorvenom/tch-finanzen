@@ -537,7 +537,22 @@ async function addAusgabe(){
   const ausMa=document.getElementById('aus-ma');if(ausMa)ausMa.value='';
   renderAll();
 }
-async function togAus(id){const a=(await dbGet('ausgaben')).find(x=>x.id===id);if(a)await dbUpd('ausgaben',id,{bezahlt:a.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
+async function togAus(id){
+  const aus=await dbGet('ausgaben');
+  const a=aus.find(x=>x.id===id);
+  if(!a)return;
+  const newStatus=a.bezahlt==='Ja'?'Nein':'Ja';
+  await dbUpd('ausgaben',id,{bezahlt:newStatus});
+  // Konto anpassen
+  if(newStatus==='Ja'){
+    L.konto=(L.konto||0)-a.betrag;sl();
+    const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:L.konto,notiz:'Ausgabe bezahlt: '+a.beschreibung});
+  } else {
+    L.konto=(L.konto||0)+a.betrag;sl();
+    const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:L.konto,notiz:'Ausgabe rückgängig: '+a.beschreibung});
+  }
+  renderAll();
+}
 async function delAus(id){await dbDel('ausgaben',id);renderAll();}
 
 async function renderAusgaben(){
@@ -546,7 +561,10 @@ async function renderAusgaben(){
   document.getElementById('stat-aus').textContent=fmt(aus.reduce((s,a)=>s+a.betrag,0));
   const tbody=document.getElementById('aus-tbody');
   if(!aus.length){tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr>';return;}
-  tbody.innerHTML=aus.map((a,i)=>`<tr><td style="color:#AAA">${aus.length-i}</td><td>${fmtD(a.datum)}</td><td><strong>${a.beschreibung}</strong></td><td>${a.lieferant||'—'}</td><td>${a.kategorie?`<span class="badge badge-red">${a.kategorie}</span>`:'—'}</td><td style="color:var(--red);font-weight:600">${fmt(a.betrag)}</td><td><button class="toggle-btn ${a.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togAus(${a.id})">${a.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delAus(${a.id})">✕</button></td></tr>`).join('');
+  tbody.innerHTML=aus.map((a,i)=>{
+    const maA=mas.find(m=>m.name===a.mitarbeiter);const cA=maA?rc(maA.rang):'#999';
+    return `<tr><td style="color:#AAA">${aus.length-i}</td><td>${fmtD(a.datum)}</td><td><strong>${a.beschreibung}</strong></td><td>${a.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${cA}"></span>${a.mitarbeiter}</span>`:'—'}</td><td>${a.lieferant||'—'}</td><td>${a.kategorie?`<span class="badge badge-red">${a.kategorie}</span>`:'—'}</td><td style="color:var(--red);font-weight:600">${fmt(a.betrag)}</td><td><button class="toggle-btn ${a.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togAus(${a.id})">${a.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delAus(${a.id})">✕</button></td></tr>`;
+  }).join('');
 }
 
 async function renderGewinn(){
