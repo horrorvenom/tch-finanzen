@@ -151,13 +151,16 @@ tbody td{padding:8px 9px;}
       </table></div>
     </div>
     <div class="ai-box">
-      <div class="ai-box-title">🤖 TCH KI-Assistent</div>
-      <div class="ai-messages" id="ai1"><div class="ai-msg assistant">Hallo! Frag mich zu Finanzen, Mitarbeitern oder für eine Analyse.</div></div>
-      <div class="ai-input-row">
-        <input class="ai-input" id="ai-in1" placeholder="Frage stellen..." onkeydown="if(event.key==='Enter')sendAI('ai-in1','ai1')">
-        <button class="btn btn-dark btn-sm" onclick="sendAI('ai-in1','ai1')">Senden</button>
+      <div class="ai-box-title">📊 TCH Schnellanalyse</div>
+      <div id="analyse-output" style="color:#EEE;font-size:13px;line-height:1.7;min-height:60px;margin-bottom:10px">Klick auf einen Button für eine Übersicht.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#1E8449;color:white" onclick="lokalAnalyse('finanzen')">💰 Finanzübersicht</button>
+        <button class="btn btn-sm" style="background:#1A5276;color:white" onclick="lokalAnalyse('mitarbeiter')">👥 Mitarbeiter</button>
+        <button class="btn btn-sm" style="background:#D4A017;color:white" onclick="lokalAnalyse('ausstehend')">⏳ Ausstehend</button>
+        <button class="btn btn-sm" style="background:#C0392B;color:white" onclick="lokalAnalyse('top')">🏆 Top Einnahmen</button>
       </div>
     </div>
+  </div>
   </div>
 
   <!-- EINNAHMEN -->
