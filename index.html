@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCH — Finanz Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--red:#C0392B;--red-l:#FADBD8;--green:#1E8449;--green-l:#D5F5E3;--blue:#1A5276;--blue-l:#D6EAF8;--gold:#D4A017;--gold-l:#FFF8E1;--purple:#6C3483;--purple-l:#E8DAEF;--dark:#1C1C1E;--dark2:#2C2C2E;--dark3:#3A3A3C;--gray-l:#F4F6F7;--gray:#AAB7B8;--font:'Segoe UI',Arial,sans-serif;--radius:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:#F0F2F5;color:var(--dark);min-height:100vh;}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1C1C1E,#2C2C2E);}
+.login-box{background:white;border-radius:16px;padding:36px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.3);}
+.login-logo{font-size:28px;font-weight:700;color:var(--red);text-align:center;margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--gray);text-align:center;margin-bottom:24px;}
+.login-role{display:flex;gap:8px;margin-bottom:14px;}
+.role-btn{flex:1;padding:9px;border:2px solid #DDE;border-radius:8px;background:none;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font);transition:all .15s;}
+.role-btn.active{border-color:var(--red);background:var(--red-l);color:var(--red);}
+.login-input{width:100%;border:1.5px solid #DDE;border-radius:8px;padding:10px 13px;font-size:14px;font-family:var(--font);outline:none;margin-bottom:10px;}
+.login-input:focus{border-color:var(--blue);}
+.login-btn{width:100%;background:var(--red);color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;}
+.login-btn:hover{background:#A93226;}
+.login-err{min-height:18px;font-size:12px;text-align:center;margin-top:8px;color:var(--red);}
+.nav{background:var(--dark);padding:0 14px;display:flex;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);overflow-x:auto;}
+.nav-logo{color:var(--red);font-size:17px;font-weight:700;padding:13px 14px 13px 0;border-right:1px solid var(--dark3);margin-right:6px;white-space:nowrap;}
+.nav-tab{color:var(--gray);font-size:12px;padding:15px 11px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
+.nav-tab:hover{color:white;} .nav-tab.active{color:white;border-bottom-color:var(--red);}
+.nav-user{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.nav-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.nav-badge.ceo{background:var(--red);color:white;} .nav-badge.ma{background:var(--blue);color:white;}
+.nav-logout{font-size:11px;color:var(--gray);cursor:pointer;padding:5px 9px;border:1px solid var(--dark3);border-radius:5px;}
+.nav-logout:hover{color:white;}
+.main{max-width:1200px;margin:0 auto;padding:18px 13px;}
+.card{background:white;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section{display:none;} .section.active{display:block;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;}
+.stat{background:white;border-radius:var(--radius);padding:13px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:4px solid var(--gray);}
+.stat.green{border-left-color:var(--green);} .stat.red{border-left-color:var(--red);}
+.stat.gold{border-left-color:var(--gold);} .stat.blue{border-left-color:var(--blue);} .stat.purple{border-left-color:var(--purple);}
+.stat-label{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.stat-value{font-size:18px;font-weight:700;}
+.stat.green .stat-value{color:var(--green);} .stat.red .stat-value{color:var(--red);}
+.stat.gold .stat-value{color:var(--gold);} .stat.blue .stat-value{color:var(--blue);} .stat.purple .stat-value{color:var(--purple);}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;gap:3px;}
+.form-group label{font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;}
+.form-group input,.form-group select{border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue);}
+.btn{border:none;border-radius:7px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);}
+.btn-green{background:var(--green);color:white;} .btn-red{background:var(--red);color:white;}
+.btn-blue{background:var(--blue);color:white;} .btn-dark{background:var(--dark);color:white;}
+.btn-sm{padding:4px 9px;font-size:11px;} .btn-ghost{background:none;border:1.5px solid #DDE;color:var(--dark);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead tr{background:var(--dark);color:white;}
+thead th{padding:8px 9px;text-align:left;font-weight:600;font-size:10px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid #F0F0F0;} tbody tr:hover{background:var(--gray-l);}
+tbody td{padding:8px 9px;}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;}
+.badge-green{background:var(--green-l);color:var(--green);} .badge-red{background:var(--red-l);color:var(--red);}
+.badge-blue{background:var(--blue-l);color:var(--blue);} .badge-gold{background:var(--gold-l);color:var(--gold);}
+.badge-purple{background:var(--purple-l);color:var(--purple);}
+.ma-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px;}
+.ma-card{background:white;border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.ma-card-header{padding:11px 15px;color:white;display:flex;align-items:center;gap:9px;}
+.ma-avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+.ma-card-body{padding:11px 15px;}
+.ma-stat{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F0F0F0;font-size:12px;}
+.ma-stat:last-child{border-bottom:none;} .ma-stat-label{color:var(--gray);}
+.ma-list{display:flex;flex-direction:column;gap:7px;}
+.ma-list-item{display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--gray-l);border-radius:7px;flex-wrap:wrap;}
+.pct-input{width:60px;border:1.5px solid #DDE;border-radius:6px;padding:4px 7px;font-size:12px;font-weight:600;text-align:center;color:var(--gold);font-family:var(--font);outline:none;background:var(--gold-l);}
+.toggle-btn{border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font);}
+.toggle-ja{background:var(--green-l);color:var(--green);} .toggle-nein{background:var(--red-l);color:var(--red);}
+.konto-card{background:var(--blue-l);border:2px solid var(--blue);border-radius:var(--radius);padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.ai-box{background:var(--dark);border-radius:var(--radius);padding:16px;margin-top:16px;}
+.ai-box-title{color:var(--gold);font-size:12px;font-weight:600;margin-bottom:9px;}
+.ai-messages{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;margin-bottom:9px;}
+.ai-msg{padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.6;max-width:92%;}
+.ai-msg.user{background:var(--blue);color:white;align-self:flex-end;}
+.ai-msg.assistant{background:var(--dark3);color:#EEE;align-self:flex-start;}
+.ai-input-row{display:flex;gap:7px;}
+.ai-input{flex:1;background:var(--dark3);border:1.5px solid var(--dark3);border-radius:7px;padding:8px 12px;color:white;font-size:12px;font-family:var(--font);outline:none;}
+.ai-input:focus{border-color:var(--gold);}
+.locked-msg{display:flex;align-items:center;gap:9px;background:var(--red-l);border:1.5px solid var(--red);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;font-weight:600;margin-bottom:14px;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:600px){.stats{grid-template-columns:1fr 1fr;}.form-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">TCH</div>
+    <div class="login-sub">Touring Club Helvetia — Finanz Manager</div>
+    <div class="login-role">
+      <button class="role-btn active" id="role-ceo" onclick="setRole('ceo')">👑 CEO</button>
+      <button class="role-btn" id="role-ma" onclick="setRole('ma')">👤 Mitarbeiter</button>
+    </div>
+    <input class="login-input" type="email" id="login-email" placeholder="E-Mail-Adresse">
+    <input class="login-input" type="password" id="login-pass" placeholder="Passwort" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Anmelden</button>
+    <div class="login-err" id="login-err"></div>
+    <div style="text-align:center;font-size:11px;color:#AAA;margin-top:12px">Noch kein Konto? <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="doRegister()">Registrieren</span></div>
+    <div id="demo-hint" style="margin-top:14px;background:#F8F9FA;border-radius:8px;padding:11px;font-size:11px;color:#666;line-height:1.7">
+      <strong>Demo-Modus</strong> (ohne Supabase):<br>CEO: <code>ceo@tch.ch</code> / <code>tch2026</code>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<nav class="nav">
+  <div class="nav-logo">TCH</div>
+  <div class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
+  <div class="nav-tab" onclick="showTab('einnahmen')">💰 Einnahmen</div>
+  <div class="nav-tab" onclick="showTab('ausgaben')">💸 Ausgaben</div>
+  <div class="nav-tab" onclick="showTab('mitarbeiter')">👥 Mitarbeiter</div>
+  <div class="nav-tab" onclick="showTab('auswertung')">📈 Auswertung</div>
+  <div class="nav-tab" onclick="showTab('monat')">🗓️ Monatsbericht</div>
+  <div class="nav-user">
+    <span class="nav-badge" id="nav-badge">—</span>
+    <span class="nav-logout" onclick="doLogout()">Abmelden</span>
+  </div>
+</nav>
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="section active">
+    <div class="konto-card">
+      <div>
+        <div style="font-size:10px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.05em">🏦 Firmenkonto</div>
+        <div style="font-size:26px;font-weight:700;color:var(--blue)" id="konto-val">— CHF</div>
+        <div style="font-size:11px;color:#5D8AA8" id="konto-notiz-lbl"></div>
+      </div>
+      <div id="konto-edit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="number" id="konto-inp" step="0.01" placeholder="Betrag CHF" style="border:1.5px solid var(--blue);border-radius:7px;padding:7px 10px;font-size:14px;font-weight:700;width:140px;color:var(--blue);outline:none;">
+        <input type="text" id="konto-notiz-inp" placeholder="Notiz" style="border:1.5px solid #BCD;border-radius:7px;padding:7px 10px;font-size:12px;width:160px;outline:none;">
+        <button class="btn btn-blue btn-sm" onclick="saveKonto()">💾 Speichern</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat green"><div class="stat-label">Einnahmen Total</div><div class="stat-value" id="stat-ein">0.00 CHF</div></div>
+      <div class="stat red"><div class="stat-label">Ausgaben Total</div><div class="stat-value" id="stat-aus">0.00 CHF</div></div>
+      <div class="stat gold"><div class="stat-label">Gewinn / Verlust</div><div class="stat-value" id="stat-gv">0.00 CHF</div></div>
+      <div class="stat blue"><div class="stat-label">Mitarbeiter</div><div class="stat-value" id="stat-ma">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🕐 Letzte Einnahmen</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Datum</th><th>Beschreibung</th><th>Mitarbeiter</th><th>Betrag</th><th>Status</th></tr></thead>
+        <tbody id="recent-ein"><tr><td colspan="5" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="ai-box">
+      <div class="ai-box-title">🤖 TCH KI-Assistent</div>
+      <div class="ai-messages" id="ai1"><div class="ai-msg assistant">Hallo! Frag mich zu Finanzen, Mitarbeitern oder für eine Analyse.</div></div>
+      <div class="ai-input-row">
+        <input class="ai-input" id="ai-in1" placeholder="Frage stellen..." onkeydown="if(event.key==='Enter')sendAI('ai-in1','ai1')">
+        <button class="btn btn-dark btn-sm" onclick="sendAI('ai-in1','ai1')">Senden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EINNAHMEN -->
+  <div id="tab-einnahmen" class="section">
+    <div class="card">
+      <div class="card-title">💰 Neue Einnahme</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Datum</label><input type="date" id="ein-datum"></div>
+        <div class="form-group"><label>Beschreibung</label><input type="text" id="ein-desc" placeholder="z.B. Motorrevision BMW"></div>
+        <div class="form-group"><label>Kunde / Fahrzeug</label><input type="text" id="ein-kunde"></div>
+        <div class="form-group"><label>Kategorie</label><select id="ein-kat"><option value="">— wählen —</option><option>Werkstatt</option><option>Abschleppdienst</option><option>Gutachten</option><option>Eintragung</option><option>MFK-Vorbereitung</option><option>Sonstiges</option></select></div>
+        <div class="form-group"><label>Mitarbeiter</label><select id="ein-ma"><option value="">— wählen —</option></select></div>
+        <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="ein-betrag" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group"><label>Bezahlt</label><select id="ein-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
+      </div>
+      <button class="btn btn-green" onclick="addEinnahme()">✚ Speichern</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Alle Einnahmen</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Datum</th><th>Beschreibung</th><th>Kunde</th><th>Kategorie</th><th>Mitarbeiter</th><th>Betrag</th><th>Provision</th><th>Bezahlt ↕</th><th></th></tr></thead>
+        <tbody id="ein-tbody"><tr><td colspan="10" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- AUSGABEN -->
+  <div id="tab-ausgaben" class="section">
+    <div class="card">
+      <div class="card-title">💸 Neue Ausgabe</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Datum</label><input type="date" id="aus-datum"></div>
+        <div class="form-group"><label>Beschreibung</label><input type="text" id="aus-desc" placeholder="z.B. Ersatzteile"></div>
+        <div class="form-group"><label>Lieferant</label><input type="text" id="aus-lief"></div>
+        <div class="form-group"><label>Kategorie</label><select id="aus-kat"><option value="">— wählen —</option><option>Löhne</option><option>Ersatzteile</option><option>Fahrzeugkosten</option><option>Werkzeug & Ausrüstung</option><option>Miete & Nebenkosten</option><option>Versicherung</option><option>Sonstiges</option></select></div>
+        <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="aus-betrag" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group"><label>Bezahlt</label><select id="aus-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
+      </div>
+      <button class="btn btn-red" onclick="addAusgabe()">✚ Speichern</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Alle Ausgaben</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Datum</th><th>Beschreibung</th><th>Lieferant</th><th>Kategorie</th><th>Betrag</th><th>Bezahlt ↕</th><th></th></tr></thead>
+        <tbody id="aus-tbody"><tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- MITARBEITER -->
+  <div id="tab-mitarbeiter" class="section">
+    <div id="ma-locked" class="locked-msg" style="display:none">🔒 Nur der CEO kann Mitarbeiter verwalten.</div>
+    <div id="ma-form">
+      <div class="card">
+        <div class="card-title">👤 Neuen Mitarbeiter hinzufügen</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Name</label><input type="text" id="ma-name" placeholder="Vorname Nachname"></div>
+          <div class="form-group"><label>E-Mail (Login)</label><input type="email" id="ma-email" placeholder="name@tch.ch"></div>
+          <div class="form-group"><label>Rang</label><select id="ma-rang"><option value="">— wählen —</option><option>Abschleppdienst-Leitung</option><option>Werkstattleiter</option><option>Abschlepper-Mechaniker</option><option>Lehrling</option></select></div>
+          <div class="form-group"><label>Monatslohn (CHF)</label><input type="number" id="ma-lohn" placeholder="0" min="0"></div>
+          <div class="form-group"><label>Provision %</label><input type="number" id="ma-prov" placeholder="0" min="0" max="100" step="0.5"></div>
+        </div>
+        <button class="btn btn-dark" onclick="addMitarbeiter()">✚ Mitarbeiter hinzufügen</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 Mitarbeiterliste</div>
+      <div class="ma-list" id="ma-list"><div style="color:#AAA;padding:14px;text-align:center">Wird geladen...</div></div>
+    </div>
+  </div>
+
+  <!-- AUSWERTUNG -->
+  <div id="tab-auswertung" class="section">
+    <div class="card"><div class="card-title">📈 Mitarbeiter-Auswertung</div><div class="ma-grid" id="ma-auswertung"><div style="color:#AAA;padding:14px">Keine Daten</div></div></div>
+    <div class="card">
+      <div class="card-title">📊 Einnahmen nach Kategorie</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Kategorie</th><th>Anzahl</th><th>Total (CHF)</th><th>Anteil</th></tr></thead>
+        <tbody id="kat-tbody"><tr><td colspan="4" style="color:#AAA;text-align:center;padding:14px">Keine Daten</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="ai-box">
+      <div class="ai-box-title">🤖 KI-Auswertung</div>
+      <div class="ai-messages" id="ai2"><div class="ai-msg assistant">Klick "Analysieren" für eine vollständige Auswertung.</div></div>
+      <div class="ai-input-row">
+        <input class="ai-input" id="ai-in2" placeholder="Frage..." onkeydown="if(event.key==='Enter')sendAI('ai-in2','ai2')">
+        <button class="btn btn-sm" style="background:var(--green);color:white" onclick="analyzeAll()">🔍 Analysieren</button>
+        <button class="btn btn-dark btn-sm" onclick="sendAI('ai-in2','ai2')">Fragen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONATSBERICHT -->
+  <div id="tab-monat" class="section">
+    <div class="card" style="padding:14px 18px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0"><label>Monat</label>
+          <select id="monat-sel" onchange="renderMonat()" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;outline:none">
+            <option value="0">Januar</option><option value="1">Februar</option><option value="2">März</option><option value="3">April</option><option value="4">Mai</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">August</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Dezember</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0"><label>Jahr</label>
+          <input type="number" id="jahr-sel" value="2026" min="2020" max="2099" onchange="renderMonat()" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;width:82px;outline:none">
+        </div>
+      </div>
+    </div>
+    <div id="monat-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>
+    <div class="card"><div class="card-title">📊 Komplettübersicht</div><div id="monat-ov"></div></div>
+    <div class="card">
+      <div class="card-title">👥 Lohn- & Provisionsabrechnung pro Mitarbeiter</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Mitarbeiter</th><th>Rang</th><th>Einnahmen Monat</th><th>Provision %</th><th>Provision CHF</th><th>Monatslohn</th><th>Total Auszahlung</th></tr></thead>
+        <tbody id="lohn-tbody"><tr><td colspan="7" style="color:#AAA;text-align:center;padding:14px">—</td></tr></tbody>
+      </table></div>
+      <div id="lohn-sum" style="margin-top:10px"></div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue)">🏦 Firmenkonto nach Abzügen</div>
+      <div id="konto-prog"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ══ SUPABASE CONFIG ══
+const SB_URL = 'https://rbnrppheuvbmnlidcmei.supabase.co';
+const SB_KEY = 'sb_publishable_7A48mPikMbsGVrJOWJr98g_g2AtN1pF';
+let _sb = null;
+function sb() { if(!_sb && SB_URL!=='') _sb=supabase.createClient(SB_URL,SB_KEY); return _sb; }
+
+// ══ LOCAL STATE ══
+let L = JSON.parse(localStorage.getItem('tch')||'{"einnahmen":[],"ausgaben":[],"mitarbeiter":[],"konto":0,"kNotiz":""}');
+function sl() { localStorage.setItem('tch',JSON.stringify(L)); }
+
+let CU = null; // current user
+let selRole = 'ceo';
+
+// ══ HELPERS ══
+const fmt = n => Number(n||0).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2})+' CHF';
+const fmtD = d => { if(!d)return '—'; try{return new Date(d).toLocaleDateString('de-CH');}catch(e){return d;} };
+const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstattleiter':'#1A5276','Abschlepper-Mechaniker':'#6C3483','Lehrling':'#1E8449'}[r]||'#555');
+const isCEO = () => CU?.role==='ceo';
+
+// ══ LOGIN ══
+function setRole(r) {
+  selRole=r;
+  document.getElementById('role-ceo').classList.toggle('active',r==='ceo');
+  document.getElementById('role-ma').classList.toggle('active',r==='ma');
+}
+
+async function doLogin() {
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  err.textContent=''; err.style.color='var(--red)';
+  if(!email||!pass){err.textContent='Bitte E-Mail und Passwort eingeben.';return;}
+  const s=sb();
+  if(s){
+    const {data,error}=await s.auth.signInWithPassword({email,password:pass});
+    if(error){err.textContent='❌ '+error.message;return;}
+    const {data:prof}=await s.from('profiles').select('*').eq('id',data.user.id).single();
+    CU={email,role:prof?.role||selRole,name:prof?.name||email};
+    await loadKonto();
+  } else {
+    // Demo
+    if(email==='ceo@tch.ch'&&pass==='tch2026'){CU={email,role:'ceo',name:'Momo Sinclair'};}
+    else {
+      const ma=L.mitarbeiter.find(m=>m.email===email);
+      if(ma&&pass.length>=4){CU={email,role:'ma',name:ma.name};}
+      else{err.textContent='❌ Unbekannte E-Mail oder falsches Passwort.';return;}
+    }
+  }
+  startApp();
+}
+
+async function doRegister() {
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  const s=sb();
+  if(!s){err.textContent='ℹ️ Supabase nötig. Demo: ceo@tch.ch / tch2026';return;}
+  const {error}=await s.auth.signUp({email,password:pass});
+  if(error){err.textContent='❌ '+error.message;}
+  else{err.style.color='green';err.textContent='✅ Bestätigungsmail gesendet!';}
+}
+
+function doLogout(){CU=null;sb()?.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
+
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const b=document.getElementById('nav-badge');
+  b.textContent=isCEO()?'👑 CEO':'👤 '+CU.name;
+  b.className='nav-badge '+(isCEO()?'ceo':'ma');
+  document.getElementById('ma-form').style.display=isCEO()?'block':'none';
+  document.getElementById('ma-locked').style.display=isCEO()?'none':'flex';
+  document.getElementById('konto-edit').style.display=isCEO()?'flex':'none';
+  document.getElementById('ein-datum').valueAsDate=new Date();
+  document.getElementById('aus-datum').valueAsDate=new Date();
+  const now=new Date();
+  if(document.getElementById('monat-sel'))document.getElementById('monat-sel').value=now.getMonth();
+  renderAll();
+}
+
+// ══ TABS ══
+function showTab(t){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.target.classList.add('active');
+  renderAll();
+  if(t==='monat')renderMonat();
+}
+
+// ══ DB LAYER ══
+async function dbGet(tbl){
+  const s=sb();
+  if(s){const {data}=await s.from(tbl).select('*').order('created_at',{ascending:false});return data||[];}
+  return L[tbl]||[];
+}
+async function dbIns(tbl,row){
+  const s=sb();
+  if(s){const {data,error}=await s.from(tbl).insert(row).select().single();if(error)throw error;return data;}
+  const r={...row,id:Date.now()};if(!L[tbl])L[tbl]=[];L[tbl].unshift(r);sl();return r;
+}
+async function dbUpd(tbl,id,u){
+  const s=sb();
+  if(s){await s.from(tbl).update(u).eq('id',id);}
+  else{const i=(L[tbl]||[]).findIndex(r=>r.id===id);if(i>=0){L[tbl][i]={...L[tbl][i],...u};sl();}}
+}
+async function dbDel(tbl,id){
+  const s=sb();
+  if(s){await s.from(tbl).delete().eq('id',id);}
+  else{L[tbl]=(L[tbl]||[]).filter(r=>r.id!==id);sl();}
+}
+
+// ══ KONTO ══
+async function loadKonto(){
+  const s=sb();
+  if(s){const {data}=await s.from('settings').select('*').eq('key','konto').single();if(data){L.konto=data.value;L.kNotiz=data.notiz;}}
+}
+async function saveKonto(){
+  const v=parseFloat(document.getElementById('konto-inp').value)||0;
+  const n=document.getElementById('konto-notiz-inp').value.trim();
+  L.konto=v;L.kNotiz=n;sl();
+  const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:v,notiz:n});
+  renderKonto();
+}
+function renderKonto(){
+  document.getElementById('konto-val').textContent=fmt(L.konto);
+  document.getElementById('konto-notiz-lbl').textContent=L.kNotiz||'';
+  document.getElementById('konto-inp').value=L.konto||0;
+  document.getElementById('konto-notiz-inp').value=L.kNotiz||'';
+}
+
+// ══ MITARBEITER ══
+async function addMitarbeiter(){
+  if(!isCEO())return;
+  const name=document.getElementById('ma-name').value.trim();
+  const email=document.getElementById('ma-email').value.trim();
+  const rang=document.getElementById('ma-rang').value;
+  const lohn=parseFloat(document.getElementById('ma-lohn').value)||0;
+  const prov=parseFloat(document.getElementById('ma-prov').value)||0;
+  if(!name||!rang){alert('Name und Rang sind Pflicht.');return;}
+  await dbIns('mitarbeiter',{name,email,rang,lohn,provision:prov});
+  ['ma-name','ma-email','ma-lohn','ma-prov'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ma-rang').value='';
+  renderAll();
+}
+async function delMA(id){if(!isCEO()||!confirm('Löschen?'))return;await dbDel('mitarbeiter',id);renderAll();}
+async function updProv(id,v){await dbUpd('mitarbeiter',id,{provision:parseFloat(v)||0});renderAll();}
+async function updLohn(id,v){if(!isCEO())return;await dbUpd('mitarbeiter',id,{lohn:parseFloat(v)||0});renderAll();}
+
+async function renderMitarbeiter(){
+  const mas=await dbGet('mitarbeiter');
+  const ein=await dbGet('einnahmen');
+  const sel=document.getElementById('ein-ma');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— wählen —</option>';
+  mas.forEach(m=>{const o=document.createElement('option');o.value=m.name;o.textContent=m.name+' ('+m.rang+')';sel.appendChild(o);});
+  sel.value=cur;
+  document.getElementById('stat-ma').textContent=mas.length;
+  const list=document.getElementById('ma-list');
+  if(!mas.length){list.innerHTML='<div style="color:#AAA;padding:14px;text-align:center">Keine Mitarbeiter</div>';return;}
+  list.innerHTML=mas.map(m=>{
+    const mE=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);
+    const p=mE*(m.provision||0)/100;
+    const c=rc(m.rang);
+    return `<div class="ma-list-item">
+      <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
+      <div style="flex:1;min-width:90px">
+        <div style="font-weight:600;font-size:13px">${m.name}</div>
+        <div style="font-size:11px;color:var(--gray)">${m.rang}${m.email?' · '+m.email:''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Provision%</div>
+        <input class="pct-input" type="number" min="0" max="100" step="0.5" value="${m.provision||0}" onchange="updProv(${m.id},this.value)" ${!isCEO()?'disabled':''}>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Lohn/Mt.</div>
+        <input type="number" min="0" step="100" value="${m.lohn||0}" onchange="updLohn(${m.id},this.value)" ${!isCEO()?'disabled':''} style="width:85px;border:1.5px solid #DDE;border-radius:6px;padding:4px 7px;font-size:12px;text-align:right;outline:none">
+      </div>
+      ${mE>0?`<div style="font-size:11px;text-align:right"><div style="color:var(--green);font-weight:600">${fmt(mE)}</div><div style="color:var(--gold)">Prov: ${fmt(p)}</div></div>`:''}
+      ${isCEO()?`<button class="btn btn-ghost btn-sm" onclick="delMA(${m.id})">✕</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ══ EINNAHMEN ══
+async function addEinnahme(){
+  const r={datum:document.getElementById('ein-datum').value,beschreibung:document.getElementById('ein-desc').value.trim(),kunde:document.getElementById('ein-kunde').value.trim(),kategorie:document.getElementById('ein-kat').value,mitarbeiter:document.getElementById('ein-ma').value,betrag:parseFloat(document.getElementById('ein-betrag').value)||0,bezahlt:document.getElementById('ein-bez').value};
+  if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
+  await dbIns('einnahmen',r);
+  ['ein-desc','ein-kunde','ein-betrag'].forEach(id=>document.getElementById(id).value='');
+  renderAll();
+}
+async function togEin(id){const e=(await dbGet('einnahmen')).find(x=>x.id===id);if(e)await dbUpd('einnahmen',id,{bezahlt:e.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
+async function delEin(id){await dbDel('einnahmen',id);renderAll();}
+
+async function renderEinnahmen(){
+  const ein=await dbGet('einnahmen');
+  const mas=await dbGet('mitarbeiter');
+  document.getElementById('stat-ein').textContent=fmt(ein.reduce((s,e)=>s+e.betrag,0));
+  const recent=document.getElementById('recent-ein');
+  const tbody=document.getElementById('ein-tbody');
+  if(!ein.length){recent.innerHTML='<tr><td colspan="5" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';tbody.innerHTML='<tr><td colspan="10" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';return;}
+  recent.innerHTML=ein.slice(0,5).map(e=>`<tr><td>${fmtD(e.datum)}</td><td>${e.beschreibung}</td><td>${e.mitarbeiter||'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td><button class="toggle-btn ${e.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${e.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td></tr>`).join('');
+  tbody.innerHTML=ein.map((e,i)=>{
+    const ma=mas.find(m=>m.name===e.mitarbeiter);
+    const p=ma&&ma.provision?fmt(e.betrag*ma.provision/100)+` (${ma.provision}%)`:'—';
+    return `<tr><td style="color:#AAA">${ein.length-i}</td><td>${fmtD(e.datum)}</td><td><strong>${e.beschreibung}</strong></td><td>${e.kunde||'—'}</td><td>${e.kategorie?`<span class="badge badge-blue">${e.kategorie}</span>`:'—'}</td><td>${e.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${ma?rc(ma.rang):'#999'}"></span>${e.mitarbeiter}</span>`:'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td style="color:var(--gold);font-size:10px">${p}</td><td><button class="toggle-btn ${e.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${e.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delEin(${e.id})">✕</button></td></tr>`;
+  }).join('');
+}
+
+// ══ AUSGABEN ══
+async function addAusgabe(){
+  const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:parseFloat(document.getElementById('aus-betrag').value)||0,bezahlt:document.getElementById('aus-bez').value};
+  if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
+  await dbIns('ausgaben',r);
+  ['aus-desc','aus-lief','aus-betrag'].forEach(id=>document.getElementById(id).value='');
+  renderAll();
+}
+async function togAus(id){const a=(await dbGet('ausgaben')).find(x=>x.id===id);if(a)await dbUpd('ausgaben',id,{bezahlt:a.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
+async function delAus(id){await dbDel('ausgaben',id);renderAll();}
+
+async function renderAusgaben(){
+  const aus=await dbGet('ausgaben');
+  document.getElementById('stat-aus').textContent=fmt(aus.reduce((s,a)=>s+a.betrag,0));
+  const tbody=document.getElementById('aus-tbody');
+  if(!aus.length){tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr>';return;}
+  tbody.innerHTML=aus.map((a,i)=>`<tr><td style="color:#AAA">${aus.length-i}</td><td>${fmtD(a.datum)}</td><td><strong>${a.beschreibung}</strong></td><td>${a.lieferant||'—'}</td><td>${a.kategorie?`<span class="badge badge-red">${a.kategorie}</span>`:'—'}</td><td style="color:var(--red);font-weight:600">${fmt(a.betrag)}</td><td><button class="toggle-btn ${a.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togAus(${a.id})">${a.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delAus(${a.id})">✕</button></td></tr>`).join('');
+}
+
+async function renderGewinn(){
+  const ein=await dbGet('einnahmen');const aus=await dbGet('ausgaben');
+  const g=ein.reduce((s,e)=>s+e.betrag,0)-aus.reduce((s,a)=>s+a.betrag,0);
+  const el=document.getElementById('stat-gv');el.textContent=fmt(g);el.style.color=g>=0?'var(--green)':'var(--red)';
+}
+
+// ══ AUSWERTUNG ══
+async function renderAuswertung(){
+  const mas=await dbGet('mitarbeiter');const ein=await dbGet('einnahmen');
+  const grid=document.getElementById('ma-auswertung');
+  grid.innerHTML=!mas.length?'<div style="color:#AAA;padding:14px">Keine Mitarbeiter</div>':mas.map(m=>{
+    const at=ein.filter(e=>e.mitarbeiter===m.name);
+    const tot=at.reduce((s,e)=>s+e.betrag,0);
+    const bez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+    const p=tot*(m.provision||0)/100;
+    const c=rc(m.rang);
+    const ini=m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    return `<div class="ma-card"><div class="ma-card-header" style="background:${c}"><div class="ma-avatar">${ini}</div><div><div style="font-weight:700;font-size:13px">${m.name}</div><div style="font-size:10px;opacity:.85">${m.rang}</div></div></div><div class="ma-card-body"><div class="ma-stat"><span class="ma-stat-label">Aufträge</span><span class="ma-stat-value">${at.length}</span></div><div class="ma-stat"><span class="ma-stat-label">Einnahmen</span><span class="ma-stat-value" style="color:var(--green)">${fmt(tot)}</span></div><div class="ma-stat"><span class="ma-stat-label">Provision (${m.provision||0}%)</span><span class="ma-stat-value" style="color:var(--gold)">${fmt(p)}</span></div><div class="ma-stat"><span class="ma-stat-label">Bezahlt</span><span class="ma-stat-value" style="color:var(--green)">${fmt(bez)}</span></div><div class="ma-stat"><span class="ma-stat-label">Ausstehend</span><span class="ma-stat-value" style="color:var(--red)">${fmt(tot-bez)}</span></div>${m.lohn?`<div class="ma-stat"><span class="ma-stat-label">Monatslohn</span><span class="ma-stat-value">${fmt(m.lohn)}</span></div>`:''}</div></div>`;
+  }).join('');
+  const kats={};ein.forEach(e=>{const k=e.kategorie||'Sonstiges';if(!kats[k])kats[k]={n:0,t:0};kats[k].n++;kats[k].t+=e.betrag;});
+  const totE=ein.reduce((s,e)=>s+e.betrag,0);
+  document.getElementById('kat-tbody').innerHTML=Object.keys(kats).length?Object.entries(kats).sort((a,b)=>b[1].t-a[1].t).map(([k,v])=>`<tr><td><strong>${k}</strong></td><td>${v.n}</td><td style="color:var(--green);font-weight:600">${fmt(v.t)}</td><td>${totE>0?Math.round(v.t/totE*100)+'%':'—'}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#AAA;text-align:center;padding:14px">Keine Daten</td></tr>';
+}
+
+// ══ MONATSBERICHT ══
+async function renderMonat(){
+  const m=parseInt(document.getElementById('monat-sel')?.value??new Date().getMonth());
+  const y=parseInt(document.getElementById('jahr-sel')?.value??new Date().getFullYear());
+  const MN=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'][m];
+  const allE=await dbGet('einnahmen');const allA=await dbGet('ausgaben');const mas=await dbGet('mitarbeiter');
+  const ein=allE.filter(e=>{if(!e.datum)return false;const d=new Date(e.datum);return d.getMonth()===m&&d.getFullYear()===y;});
+  const aus=allA.filter(a=>{if(!a.datum)return false;const d=new Date(a.datum);return d.getMonth()===m&&d.getFullYear()===y;});
+  const tE=ein.reduce((s,e)=>s+e.betrag,0);
+  const tA=aus.reduce((s,a)=>s+a.betrag,0);
+  const tL=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
+  const tP=mas.reduce((s,ma)=>{const me=ein.filter(e=>e.mitarbeiter===ma.name).reduce((ss,e)=>ss+e.betrag,0);return s+me*(ma.provision||0)/100;},0);
+  const netto=tE-tA-tL-tP;
+
+  document.getElementById('monat-stats').innerHTML=`
+    <div class="stat green"><div class="stat-label">Einnahmen ${MN}</div><div class="stat-value">${fmt(tE)}</div></div>
+    <div class="stat red"><div class="stat-label">Ausgaben ${MN}</div><div class="stat-value">${fmt(tA)}</div></div>
+    <div class="stat gold"><div class="stat-label">Löhne</div><div class="stat-value">${fmt(tL)}</div></div>
+    <div class="stat purple"><div class="stat-label">Provisionen</div><div class="stat-value">${fmt(tP)}</div></div>
+    <div class="stat ${netto>=0?'green':'red'}"><div class="stat-label">Netto</div><div class="stat-value">${fmt(netto)}</div></div>`;
+
+  document.getElementById('monat-ov').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px;max-width:540px">
+    ${[['💰 Brutto-Einnahmen',tE,'#1E8449',false],['💸 Betriebsausgaben',tA,'#C0392B',true],['👥 Löhne (alle Mitarbeiter)',tL,'#D4A017',true],['📊 Provisionen (alle Mitarbeiter)',tP,'#6C3483',true]]
+      .map(([l,v,c,m])=>`<tr style="border-bottom:1px solid #EEE"><td style="padding:10px 8px">${l}</td><td style="padding:10px 8px;text-align:right;font-weight:700;color:${m?c:'#1E8449'}">${m?'− ':'+ '}${fmt(Math.abs(v))}</td></tr>`).join('')}
+    <tr style="border-top:3px solid #1C1C1E;background:#F8F9FA"><td style="padding:12px 8px;font-weight:700;font-size:14px">📈 NETTO-ERGEBNIS ${MN} ${y}</td><td style="padding:12px 8px;text-align:right;font-weight:700;font-size:20px;color:${netto>=0?'#1E8449':'#C0392B'}">${fmt(netto)}</td></tr>
+  </table>`;
+
+  // Lohn & Provision pro Mitarbeiter
+  let sL=0,sP=0,sA=0;
+  const rows=mas.map(ma=>{
+    const mE=ein.filter(e=>e.mitarbeiter===ma.name).reduce((s,e)=>s+e.betrag,0);
+    const p=mE*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
+    sL+=l;sP+=p;sA+=a;
+    const c=rc(ma.rang);
+    return `<tr><td><strong>${ma.name}</strong></td><td><span style="background:${c};color:white;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${ma.rang}</span></td><td style="color:var(--green);font-weight:600">${fmt(mE)}</td><td><span class="badge badge-gold">${ma.provision||0}%</span></td><td style="color:var(--gold);font-weight:700">${fmt(p)}</td><td style="color:var(--blue);font-weight:600">${fmt(l)}</td><td style="font-weight:700;font-size:13px">${fmt(a)}</td></tr>`;
+  });
+  document.getElementById('lohn-tbody').innerHTML=mas.length
+    ?(rows.join('')+`<tr style="background:#F8F9FA;border-top:2px solid #1C1C1E"><td colspan="2" style="padding:9px;font-weight:700">TOTAL</td><td></td><td></td><td style="color:var(--gold);font-weight:700">${fmt(sP)}</td><td style="color:var(--blue);font-weight:700">${fmt(sL)}</td><td style="color:var(--red);font-weight:700;font-size:13px">${fmt(sA)}</td></tr>`)
+    :'<tr><td colspan="7" style="color:#AAA;text-align:center;padding:14px">Keine Mitarbeiter</td></tr>';
+
+  document.getElementById('lohn-sum').innerHTML=mas.length?`<div style="background:var(--dark);color:white;border-radius:8px;padding:10px 15px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-top:8px"><span>Löhne: <strong style="color:var(--gold)">${fmt(sL)}</strong></span><span>Provisionen: <strong style="color:#A569BD">${fmt(sP)}</strong></span><span style="font-size:14px">Gesamte Auszahlung: <strong style="color:#F0B27A;font-size:15px">${fmt(sA)}</strong></span></div>`:'';
+
+  const k=L.konto||0;const kN=k+netto;
+  document.getElementById('konto-prog').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px;max-width:460px">
+    <tr style="border-bottom:1px solid #EEE"><td style="padding:9px 8px;color:#888">Aktueller Kontostand</td><td style="padding:9px 8px;text-align:right;font-weight:700;color:var(--blue)">${fmt(k)}</td></tr>
+    <tr style="border-bottom:1px solid #EEE"><td style="padding:9px 8px;color:#888">Netto-Ergebnis ${MN}</td><td style="padding:9px 8px;text-align:right;font-weight:700;color:${netto>=0?'var(--green)':'var(--red)'}">${netto>=0?'+ ':'− '}${fmt(Math.abs(netto))}</td></tr>
+    <tr style="background:var(--blue-l)"><td style="padding:11px 8px;font-weight:700;font-size:14px">Konto nach Abzügen</td><td style="padding:11px 8px;text-align:right;font-weight:700;font-size:20px;color:${kN>=0?'var(--blue)':'var(--red)'}">${fmt(kN)}</td></tr>
+  </table><div style="font-size:10px;color:#AAA;margin-top:5px">* Kontostand unter Dashboard bearbeiten.</div>`;
+}
+
+// ══ KI ══
+async function buildCtx(){
+  const ein=await dbGet('einnahmen');const aus=await dbGet('ausgaben');const mas=await dbGet('mitarbeiter');
+  const tE=ein.reduce((s,e)=>s+e.betrag,0),tA=aus.reduce((s,a)=>s+a.betrag,0);
+  return `KI-Finanzassistent der Firma TCH (Abschlepp & Werkstatt, Schweiz). Antworte auf Deutsch, präzise.
+Einnahmen: ${fmt(tE)} | Ausgaben: ${fmt(tA)} | Gewinn: ${fmt(tE-tA)} | Konto: ${fmt(L.konto)}
+Mitarbeiter: ${mas.map(m=>{const me=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);return `${m.name}(${m.rang},Prov ${m.provision||0}%,Lohn ${fmt(m.lohn||0)},Ein ${fmt(me)})`;}).join('; ')||'keine'}
+Einnahmen (letzte 10): ${ein.slice(0,10).map(e=>`${e.datum}|${e.beschreibung}|${e.mitarbeiter||'—'}|${fmt(e.betrag)}|${e.bezahlt}`).join('; ')||'keine'}`;
+}
+
+async function sendAI(inId,msgId){
+  const inp=document.getElementById(inId);const msg=inp.value.trim();if(!msg)return;inp.value='';
+  const box=document.getElementById(msgId);
+  box.innerHTML+=`<div class="ai-msg user">${msg}</div>`;
+  const ld=document.createElement('div');ld.className='ai-msg assistant';ld.innerHTML='<span class="spinner"></span> Analysiere...';box.appendChild(ld);box.scrollTop=9999;
+  try{
+    const ctx=await buildCtx();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:ctx,messages:[{role:'user',content:msg}]})});
+    const d=await res.json();ld.textContent=d.content?.[0]?.text||'Keine Antwort.';
+  }catch(e){ld.textContent='⚠️ Verbindungsfehler.';}
+  box.scrollTop=9999;
+}
+
+async function analyzeAll(){
+  const box=document.getElementById('ai2');
+  const ld=document.createElement('div');ld.className='ai-msg assistant';ld.innerHTML='<span class="spinner"></span> Vollständige Analyse...';box.appendChild(ld);box.scrollTop=9999;
+  try{
+    const ctx=await buildCtx();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:ctx,messages:[{role:'user',content:'Vollständige Finanzanalyse: Einnahmen, Ausgaben, Mitarbeiterleistung inkl. Provisionen und Löhne. Empfehlungen. Strukturiert.'}]})});
+    const d=await res.json();ld.textContent=d.content?.[0]?.text||'Keine Antwort.';
+  }catch(e){ld.textContent='⚠️ Verbindungsfehler.';}
+  box.scrollTop=9999;
+}
+
+// ══ RENDER ALL ══
+async function renderAll(){
+  renderKonto();
+  await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+}
+
+// ══ AUTO-LOGIN ══
+(async()=>{
+  const s=sb();
+  if(s){
+    const {data:{session}}=await s.auth.getSession();
+    if(session){const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).single();CU={email:session.user.email,role:p?.role||'ma',name:p?.name||session.user.email};await loadKonto();startApp();}
+  }
+})();
+</script>
+</body>
+</html>
