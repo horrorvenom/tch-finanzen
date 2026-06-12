@@ -150,17 +150,15 @@ tbody td{padding:8px 9px;}
         <tbody id="recent-ein"><tr><td colspan="5" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr></tbody>
       </table></div>
     </div>
-    <div class="ai-box">
-      <div class="ai-box-title">📊 TCH Schnellanalyse</div>
-      <div id="analyse-output" style="color:#EEE;font-size:13px;line-height:1.7;min-height:60px;margin-bottom:10px">Klick auf einen Button für eine Übersicht.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="background:#1E8449;color:white" onclick="lokalAnalyse('finanzen')">💰 Finanzübersicht</button>
-        <button class="btn btn-sm" style="background:#1A5276;color:white" onclick="lokalAnalyse('mitarbeiter')">👥 Mitarbeiter</button>
-        <button class="btn btn-sm" style="background:#D4A017;color:white" onclick="lokalAnalyse('ausstehend')">⏳ Ausstehend</button>
-        <button class="btn btn-sm" style="background:#C0392B;color:white" onclick="lokalAnalyse('top')">🏆 Top Einnahmen</button>
+    <div style="background:var(--dark);border-radius:var(--radius);padding:16px 20px;margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="color:var(--gold);font-size:13px;font-weight:600">📅 Offene Rechnungen</div>
+        <div id="offen-total" style="font-size:12px;color:#AAA"></div>
+      </div>
+      <div id="offen-liste" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:#AAA;font-size:12px;text-align:center;padding:12px">Wird geladen...</div>
       </div>
     </div>
-  </div>
   </div>
 
   <!-- EINNAHMEN -->
@@ -733,9 +731,51 @@ async function vollAnalyse() {
     </div>`;
 }
 
+
+// ══ OFFENE RECHNUNGEN ══
+async function renderOffeneRechnungen() {
+  const el = document.getElementById('offen-liste');
+  const tot = document.getElementById('offen-total');
+  if (!el) return;
+  const ein = await dbGet('einnahmen');
+  const mas = await dbGet('mitarbeiter');
+  const offen = ein.filter(e => e.bezahlt === 'Nein').sort((a,b) => new Date(a.datum) - new Date(b.datum));
+  const totalOffen = offen.reduce((s,e) => s + e.betrag, 0);
+
+  if (tot) tot.textContent = offen.length > 0
+    ? offen.length + ' offen · ' + fmt(totalOffen)
+    : '';
+
+  if (!offen.length) {
+    el.innerHTML = '<div style="color:#6ee08a;font-size:13px;text-align:center;padding:12px">✅ Alle Rechnungen sind bezahlt!</div>';
+    return;
+  }
+
+  el.innerHTML = offen.slice(0, 8).map(e => {
+    const ma = mas.find(m => m.name === e.mitarbeiter);
+    const c = ma ? rc(ma.rang) : '#555';
+    const tage = e.datum ? Math.floor((new Date() - new Date(e.datum)) / 86400000) : 0;
+    const dringend = tage > 14;
+    return `<div style="display:flex;align-items:center;gap:10px;background:${dringend?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.05)'};border-radius:8px;padding:9px 12px;border-left:3px solid ${dringend?'#C0392B':'#D4A017'}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.beschreibung}</div>
+        <div style="font-size:11px;color:#AAA;margin-top:2px">
+          ${e.mitarbeiter ? `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:${c}"></span>${e.mitarbeiter}</span> · ` : ''}
+          ${fmtD(e.datum)}${tage > 0 ? ` · <span style="color:${dringend?'#f97c7c':'#ffc94d'}">${tage} Tage offen</span>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:#f97c7c">${fmt(e.betrag)}</div>
+        <button class="toggle-btn toggle-nein" onclick="togEin(${e.id})" style="margin-top:4px;font-size:10px">Als bezahlt markieren</button>
+      </div>
+    </div>`;
+  }).join('') + (offen.length > 8 ? `<div style="color:#AAA;font-size:11px;text-align:center;padding:6px">+${offen.length - 8} weitere offene Rechnungen</div>` : '');
+}
+
 // ══ RENDER ALL ══
 async function renderAll(){
   renderKonto();
+  await renderOffeneRechnungen();
   await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
 }
 
