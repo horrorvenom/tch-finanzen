@@ -506,8 +506,12 @@ async function renderEinnahmen(){
 
 // ══ AUSGABEN ══
 async function addAusgabe(){
-  const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),mitarbeiter:document.getElementById('aus-ma')?.value||'',lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:parseFloat(document.getElementById('aus-betrag').value)||0,bezahlt:document.getElementById('aus-bez').value};
-  if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
+  // Betrag: menge × einzelpreis oder direkt aus betrag-feld
+  const menge = parseFloat(document.getElementById('aus-menge')?.value) || 1;
+  const einzelpreis = parseFloat(document.getElementById('aus-einzelpreis')?.value) || 0;
+  const betragCalc = einzelpreis > 0 ? menge * einzelpreis : parseFloat(document.getElementById('aus-betrag').value) || 0;
+  const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),mitarbeiter:document.getElementById('aus-ma')?.value||'',lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:betragCalc,bezahlt:document.getElementById('aus-bez').value};
+  if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht. Bitte Einzelpreis eingeben.');return;}
   await dbIns('ausgaben',r);
   // Firmenkonto abziehen wenn bezahlt
   if(r.bezahlt==='Ja'){
