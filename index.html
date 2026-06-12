@@ -197,6 +197,13 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="aus-betrag" placeholder="0.00" min="0" step="0.01"></div>
         <div class="form-group"><label>Bezahlt</label><select id="aus-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Schnellauswahl Ersatzteil / Dienstleistung</div>
+        <select id="aus-ersatzteil" onchange="onErsatzteilChange()" style="width:100%;border:1.5px solid #D4A017;border-radius:7px;padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;background:#FFF8E1;color:#1C1C1E">
+          <option value="">— Ersatzteil wählen (füllt Felder automatisch aus) —</option>
+        </select>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">💡 Wähle ein Ersatzteil — Beschreibung, Preis und Kategorie werden automatisch ausgefüllt. Bei Bezahlt=Ja wird der Betrag vom Firmenkonto abgezogen.</div>
+      </div>
       <button class="btn btn-red" onclick="addAusgabe()">✚ Speichern</button>
     </div>
     <div class="card">
@@ -353,6 +360,7 @@ function startApp(){
   document.getElementById('ma-locked').style.display=isCEO()?'none':'flex';
   document.getElementById('konto-edit').style.display=isCEO()?'flex':'none';
   document.getElementById('ein-datum').valueAsDate=new Date();
+  buildErsatzteileDropdown();
   document.getElementById('aus-datum').valueAsDate=new Date();
   const now=new Date();
   if(document.getElementById('monat-sel'))document.getElementById('monat-sel').value=now.getMonth();
@@ -495,7 +503,13 @@ async function addAusgabe(){
   const r={datum:document.getElementById('aus-datum').value,beschreibung:document.getElementById('aus-desc').value.trim(),lieferant:document.getElementById('aus-lief').value.trim(),kategorie:document.getElementById('aus-kat').value,betrag:parseFloat(document.getElementById('aus-betrag').value)||0,bezahlt:document.getElementById('aus-bez').value};
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
   await dbIns('ausgaben',r);
+  // Firmenkonto abziehen wenn bezahlt
+  if(r.bezahlt==='Ja'){
+    L.konto=(L.konto||0)-r.betrag;sl();
+    const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:L.konto,notiz:'Ausgabe: '+r.beschreibung});
+  }
   ['aus-desc','aus-lief','aus-betrag'].forEach(id=>document.getElementById(id).value='');
+  const sel=document.getElementById('aus-ersatzteil');if(sel)sel.value='';
   renderAll();
 }
 async function togAus(id){const a=(await dbGet('ausgaben')).find(x=>x.id===id);if(a)await dbUpd('ausgaben',id,{bezahlt:a.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
@@ -617,6 +631,98 @@ async function analyzeAll(){
   box.scrollTop=9999;
 }
 
+
+
+// ══ ERSATZTEILE PREISLISTE ══
+const ERSATZTEILE = {
+  "Motor & Antrieb": [
+    {name:"Zündkerzen (inkl. Montage)", preis:30, einheit:"pro Stück"},
+    {name:"Motoröl", preis:100, einheit:"pro Liter"},
+    {name:"Luftfilter", preis:300, einheit:"typisch"},
+    {name:"Kraftstofffilter", preis:300, einheit:"pro Fahrzeug"},
+    {name:"Teilreparatur (Dichtungen, kleinere Teile)", preis:2000, einheit:"pauschal"},
+    {name:"Kupplung wechseln (Kit)", preis:1100, einheit:"pauschal"},
+    {name:"Motorüberholung / Revision", preis:2500, einheit:"pauschal"},
+    {name:"Austauschmotor (inkl. Einbau)", preis:5000, einheit:"pauschal"},
+    {name:"Getriebeöl", preis:100, einheit:"pro Liter"},
+  ],
+  "Bremsen & Fahrwerk": [
+    {name:"Bremsscheiben + Beläge", preis:1200, einheit:"pro Achse"},
+    {name:"Bremssattel Service", preis:800, einheit:"pauschal"},
+    {name:"Federn", preis:1000, einheit:"pro Achse"},
+    {name:"Stossdämpfer", preis:1000, einheit:"pro Achse"},
+    {name:"Rad / Reifen-Montage", preis:800, einheit:"pro Rad"},
+  ],
+  "Karosserie & Scheiben": [
+    {name:"Kratzer / leichte Beulen", preis:2000, einheit:"ca."},
+    {name:"Stossstange reparieren / lackieren", preis:2000, einheit:"pauschal"},
+    {name:"Heckschaden", preis:2000, einheit:"pauschal"},
+    {name:"Karosserie-Reparatur (Front/Seite)", preis:1000, einheit:"pauschal"},
+    {name:"Autotür", preis:1200, einheit:"pro Stück"},
+    {name:"Frontscheibe", preis:900, einheit:"pauschal"},
+    {name:"Seitenscheibe", preis:450, einheit:"pro Stück"},
+  ],
+  "Fahrzeugkontrolle & MFK": [
+    {name:"Motorkontrolle / Diagnose", preis:120, einheit:"pauschal"},
+    {name:"Vollständige Fahrzeugkontrolle", preis:250, einheit:"pauschal"},
+    {name:"MFK-Vorbereitung", preis:350, einheit:"ca."},
+    {name:"MFK-Begleitung", preis:150, einheit:"pauschal"},
+    {name:"Abgasmessung / OBD-Check", preis:80, einheit:"pauschal"},
+  ],
+  "Teilegutachten": [
+    {name:"Einzeleintragung", preis:450, einheit:"ca."},
+    {name:"Teilegutachten Standard", preis:525, einheit:"ca."},
+    {name:"Teilegutachten Komplex", preis:900, einheit:"ca."},
+  ],
+  "DTC Gutachten": [
+    {name:"DTC Gutachten Standard-Komplettumbau", preis:2250, einheit:"ca."},
+    {name:"DTC Gutachten massiver Umbau", preis:4500, einheit:"ca."},
+    {name:"DTC Gutachten Sonderanfertigung", preis:6000, einheit:"ab"},
+    {name:"Nachprüfung / Abnahme nach Umbau", preis:500, einheit:"pauschal"},
+  ],
+};
+
+function buildErsatzteileDropdown() {
+  const sel = document.getElementById('aus-ersatzteil');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Ersatzteil wählen (optional) —</option>';
+  Object.entries(ERSATZTEILE).forEach(([kat, items]) => {
+    const og = document.createElement('optgroup');
+    og.label = kat;
+    items.forEach(item => {
+      const o = document.createElement('option');
+      o.value = JSON.stringify(item);
+      o.textContent = item.name + ' — ' + item.preis.toLocaleString('de-CH') + ' CHF (' + item.einheit + ')';
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+}
+
+function onErsatzteilChange() {
+  const sel = document.getElementById('aus-ersatzteil');
+  const val = sel.value;
+  if (!val) return;
+  const item = JSON.parse(val);
+  document.getElementById('aus-desc').value = item.name;
+  document.getElementById('aus-betrag').value = item.preis;
+  document.getElementById('aus-kat').value = 'Ersatzteile';
+  // Highlight
+  document.getElementById('aus-betrag').style.borderColor = '#D4A017';
+  setTimeout(() => { document.getElementById('aus-betrag').style.borderColor = ''; }, 2000);
+}
+
+async function addAusgabeAndDeductKonto(row) {
+  // Konto abziehen wenn Ersatzteil ausgewählt
+  const sel = document.getElementById('aus-ersatzteil');
+  if (sel && sel.value && row.bezahlt === 'Ja') {
+    L.konto = (L.konto || 0) - row.betrag;
+    sl();
+    const s = sb();
+    if (s) await s.from('settings').upsert({key:'konto', value:L.konto, notiz:'Auto-Abzug: '+row.beschreibung});
+    renderKonto();
+  }
+}
 
 // ══ LOKALE ANALYSE (ohne KI) ══
 async function lokalAnalyse(typ) {
