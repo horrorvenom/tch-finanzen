@@ -528,6 +528,29 @@ const fmtD = d => { if(!d)return '—'; try{return new Date(d).toLocaleDateStrin
 const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstattleiter':'#1A5276','Abschlepper-Mechaniker':'#6C3483','Lehrling':'#1E8449'}[r]||'#555');
 const isCEO = () => CU?.role==='ceo';
 
+function applyPermissions() {
+  if (isCEO()) return;
+  const mas = L.mitarbeiter || [];
+  const m = mas.find(x => x.email === CU?.email);
+  const perms = m?.permissions ? JSON.parse(m.permissions) : ['einnahmen','mfk','halter'];
+  const allTabs = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter'];
+  allTabs.forEach(tab => {
+    const navTab = document.querySelector('[onclick*="showTab(\''+tab+'\')"]');
+    if (navTab) navTab.style.display = perms.includes(tab) ? '' : 'none';
+  });
+}
+
+
+// ══ RENDER ALL ══
+async function renderAll(){
+  applyPermissions();
+  renderKonto();
+  await renderOffeneRechnungen();
+  await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+}
+
+
+
 // ══ LOGIN ══
 function setRole(r) { selRole=r; }
 
@@ -1670,12 +1693,14 @@ function editPerms(id) {
   document.body.appendChild(div);
 }
 
-// ══ RENDER ALL ══
-async function renderAll(){
-  applyPermissions();
-  renderKonto();
-  await renderOffeneRechnungen();
-  await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+
+async function savePerms(id) {
+  const tabs = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter'];
+  const selected = tabs.filter(t => document.getElementById('ep-'+t)?.checked);
+  await dbUpd('mitarbeiter', id, {permissions: JSON.stringify(selected)});
+  closePermModal();
+  renderAll();
+  alert('✅ Zugriffsrechte gespeichert!');
 }
 
 // ══ AUTO-LOGIN ══
@@ -1689,7 +1714,7 @@ async function renderAll(){
         const {data} = await s.from('mitarbeiter').select('*').eq('email', session.user.email);
         if(!data || data.length === 0) { await s.auth.signOut(); return; }
       }
-      const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).single();
+      const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
       CU={email:session.user.email,role:session.user.email===CEO_EMAIL?'ceo':(p?.role||'ma'),name:p?.name||session.user.email};
       await loadKonto();
       startApp();
