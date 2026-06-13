@@ -558,6 +558,13 @@ async function togglePerm(id, tab) {
   renderAll();
 }
 
+
+async function updRang(id, val) {
+  if (!isCEO()) return;
+  await dbUpd('mitarbeiter', id, {rang: val});
+  renderAll();
+}
+
 // ══ RENDER ALL ══
 async function renderAll(){
   applyPermissions();
@@ -796,7 +803,14 @@ async function renderMitarbeiter(){
         <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
         <div style="flex:1;min-width:90px">
           <div style="font-weight:600;font-size:13px">${m.name}</div>
-          <div style="font-size:11px;color:var(--gray)">${m.rang}${m.email?' · '+m.email:''}</div>
+          <div style="font-size:11px;color:var(--gray);margin-bottom:3px">${m.email||''}</div>
+          ${isCEO()?`<select onchange="updRang(${m.id},this.value)" style="border:1.5px solid #DDE;border-radius:6px;padding:3px 7px;font-size:11px;font-family:var(--font);outline:none;background:white;color:${c}">
+            <option value="CEO" ${m.rang==='CEO'?'selected':''}>CEO</option>
+            <option value="Abschleppdienst-Leitung" ${m.rang==='Abschleppdienst-Leitung'?'selected':''}>Abschleppdienst-Leitung</option>
+            <option value="Werkstattleiter" ${m.rang==='Werkstattleiter'?'selected':''}>Werkstattleiter</option>
+            <option value="Abschlepper-Mechaniker" ${m.rang==='Abschlepper-Mechaniker'?'selected':''}>Abschlepper-Mechaniker</option>
+            <option value="Lehrling" ${m.rang==='Lehrling'?'selected':''}>Lehrling</option>
+          </select>`:`<span style="font-size:11px;color:${c};font-weight:600">${m.rang}</span>`}
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
           <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Provision%</div>
