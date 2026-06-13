@@ -765,7 +765,20 @@ async function addMitarbeiter(){
   document.getElementById('ma-rang').value='';
   renderAll();
 }
-async function delMA(id){if(!isCEO()||!confirm('Löschen?'))return;await dbDel('mitarbeiter',id);renderAll();}
+async function delMA(id){
+  if(!isCEO()||!confirm('Mitarbeiter wirklich löschen? Der Login wird ebenfalls gesperrt.'))return;
+  // Get email before deleting
+  const mas=await dbGet('mitarbeiter');
+  const m=mas.find(x=>x.id===id);
+  // Delete from mitarbeiter table
+  await dbDel('mitarbeiter',id);
+  // Delete from profiles table (blocks login check)
+  const s=sb();
+  if(s&&m?.email){
+    await s.from('profiles').delete().eq('email',m.email);
+  }
+  renderAll();
+}
 async function updProv(id,v){await dbUpd('mitarbeiter',id,{provision:parseFloat(v)||0});renderAll();}
 async function updLohn(id,v){if(!isCEO())return;await dbUpd('mitarbeiter',id,{lohn:parseFloat(v)||0});renderAll();}
 
