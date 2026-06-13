@@ -1233,12 +1233,24 @@ function mfkStatusBadge(fz) {
   const naechste = fz.mfk?.naechste;
   let tage = null;
   if (naechste) tage = Math.floor((new Date(naechste) - new Date()) / 86400000);
-  
-  if (status === 'Nicht bestanden') return '<span class="status-faellig">❌ Nicht bestanden</span>';
-  if (status === 'Abgelaufen' || (tage !== null && tage < 0)) return '<span class="status-faellig">⚠️ Abgelaufen</span>';
-  if (tage !== null && tage <= 30) return `<span class="status-bald">⏰ MFK in ${tage} Tagen</span>`;
-  if (status === 'OK') return '<span class="status-ok">✅ OK</span>';
-  return '<span class="status-bald">⏳ Ausstehend</span>';
+
+  if (status === 'Nicht bestanden') return '<span style="background:#C0392B;color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">❌ Nicht bestanden</span>';
+  if (status === 'Abgelaufen' || (tage !== null && tage < 0)) return '<span style="background:#E74C3C;color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">⚠️ Abgelaufen</span>';
+  if (tage !== null && tage <= 30) return `<span style="background:#D4A017;color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">⏰ MFK in ${tage} Tagen</span>`;
+  if (status === 'OK') return '<span style="background:#1E8449;color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">✅ Bestanden</span>';
+  return '<span style="background:#1A5276;color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">⏳ Ausstehend</span>';
+}
+
+function mfkStatusColor(fz) {
+  const status = fz.mfk?.status || 'Ausstehend';
+  const naechste = fz.mfk?.naechste;
+  let tage = null;
+  if (naechste) tage = Math.floor((new Date(naechste) - new Date()) / 86400000);
+  if (status === 'Nicht bestanden') return '#C0392B';
+  if (status === 'Abgelaufen' || (tage !== null && tage < 0)) return '#E74C3C';
+  if (tage !== null && tage <= 30) return '#D4A017';
+  if (status === 'OK') return '#1E8449';
+  return '#1A5276';
 }
 
 function renderFahrzeuge(liste) {
@@ -1270,9 +1282,9 @@ function renderFahrzeuge(liste) {
     const isAlert = fz.mfk?.status === 'Nicht bestanden' || fz.mfk?.status === 'Abgelaufen' || (tage !== null && tage < 0);
     const isBald = tage !== null && tage >= 0 && tage <= 30;
 
-    return `<div class="fz-card" style="border-left:4px solid ${isAlert?'#C0392B':isBald?'#D4A017':'#1A5276'}">
-      <div class="fz-header">
-        <div style="background:${isAlert?'#C0392B':isBald?'#D4A017':'#1A5276'};color:white;padding:5px 12px;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:.05em">${fz.kennzeichen}</div>
+    return `<div class="fz-card" style="border-left:4px solid ${mfkStatusColor(fz)}">
+      <div class="fz-header" style="border-bottom:2px solid ${mfkStatusColor(fz)}20">
+        <div style="background:${mfkStatusColor(fz)};color:white;padding:5px 12px;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:.05em">${fz.kennzeichen}</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:14px">${fz.marke} ${fz.modell || ''} ${fz.baujahr ? '('+fz.baujahr+')' : ''}</div>
           <div style="font-size:11px;color:var(--gray)">${fz.farbe ? fz.farbe+' · ' : ''}${fz.vin ? 'VIN: '+fz.vin : ''}</div>
@@ -1291,8 +1303,9 @@ function renderFahrzeuge(liste) {
         </div>
         <div>
           <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;margin-bottom:6px">🔧 MFK</div>
+          <div class="fz-row"><span class="fz-label">Status</span><span class="fz-val">${mfkStatusBadge(fz)}</span></div>
           ${fz.mfk?.datum ? `<div class="fz-row"><span class="fz-label">Letzte MFK</span><span class="fz-val">${fmtD(fz.mfk.datum)}</span></div>` : ''}
-          ${fz.mfk?.naechste ? `<div class="fz-row"><span class="fz-label">Nächste MFK</span><span class="fz-val" style="color:${isAlert?'#C0392B':isBald?'#D4A017':'inherit'}">${fmtD(fz.mfk.naechste)}${tage !== null ? ' ('+tage+' Tage)' : ''}</span></div>` : ''}
+          ${fz.mfk?.naechste ? `<div class="fz-row"><span class="fz-label">Nächste MFK</span><span class="fz-val" style="color:${mfkStatusColor(fz)};font-weight:600">${fmtD(fz.mfk.naechste)}${tage !== null ? ' ('+tage+' Tage)' : ''}</span></div>` : ''}
           ${fz.gutachten ? `<div class="fz-row"><span class="fz-label">Gutachten</span><span class="fz-val">${fz.gutachten}</span></div>` : ''}
           ${fz.eintragung ? `<div class="fz-row"><span class="fz-label">Eintragung</span><span class="fz-val">${fz.eintragung}</span></div>` : ''}
           ${fz.bemerkung ? `<div class="fz-row"><span class="fz-label">Bemerkung</span><span class="fz-val">${fz.bemerkung}</span></div>` : ''}
