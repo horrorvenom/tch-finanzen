@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TCH App v20260613130000 -->
+<!-- TCH App v20260613130001 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -1619,8 +1619,8 @@ async function renderFahrzeuge(liste) {
           <div style="font-size:12px;color:#888;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap">${fz.farbe?'🎨 '+fz.farbe:''}${fz.vin?' · VIN: '+fz.vin:''}</div>
         </div>
         ${mfkStatusBadge(fz)}
-        <button onclick="editFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✏️</button>
-        <button onclick="deleteFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
+        <button onclick="editFahrzeug('${fz.id}')" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✏️</button>
+        <button onclick="deleteFahrzeug('${fz.id}')" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
         <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
