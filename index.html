@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TCH App v20260613120001 -->
+<!-- TCH App v20260613130000 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -1436,25 +1436,37 @@ async function renderOffeneRechnungen() {
 
 
 // ══ MFK / FAHRZEUGE ══
-// Lokale Fahrzeug-Daten (localStorage für Demo, Supabase wenn verfügbar)
-function getFahrzeuge() {
+// Supabase-basierte Fahrzeugverwaltung (alle Benutzer sehen alle Fahrzeuge)
+async function getFahrzeuge() {
+  const s = sb();
+  if (s) {
+    const { data } = await s.from('fahrzeuge').select('*').order('erfasst', { ascending: false });
+    return (data || []).map(row => ({
+      id: row.id,
+      kennzeichen: row.kennzeichen,
+      marke: row.marke,
+      modell: row.modell,
+      baujahr: row.baujahr,
+      farbe: row.farbe,
+      vin: row.vin,
+      halter: row.halter || {},
+      mfk: row.mfk || {},
+      gutachten: row.gutachten,
+      eintragung: row.eintragung,
+      bemerkung: row.bemerkung,
+      erfasst: row.erfasst,
+    }));
+  }
   return JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]');
 }
-function saveFahrzeuge(fz) {
-  localStorage.setItem('tch_fahrzeuge', JSON.stringify(fz));
-}
 
-function saveFahrzeug() {
+async function saveFahrzeug() {
   const kz = document.getElementById('fz-kennzeichen').value.trim().toUpperCase();
   const marke = document.getElementById('fz-marke').value.trim();
   const modell = document.getElementById('fz-modell').value.trim();
   if (!kz || !marke) { alert('Kennzeichen und Marke sind Pflicht.'); return; }
 
-  const fahrzeuge = getFahrzeuge();
-  const existing = fahrzeuge.findIndex(f => f.kennzeichen === kz);
-
-  const fz = {
-    id: existing >= 0 ? fahrzeuge[existing].id : Date.now(),
+  const fzData = {
     kennzeichen: kz,
     marke, modell,
     baujahr: document.getElementById('fz-baujahr').value,
@@ -1476,11 +1488,26 @@ function saveFahrzeug() {
     eintragung: ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'].filter(k=>document.getElementById('fz-ein-'+k)?.checked).join(', '),
     bemerkung: document.getElementById('fz-bemerkung').value.trim(),
     erfasst: new Date().toISOString(),
+    erfasst_von: CU?.email || '',
   };
 
-  if (existing >= 0) { fahrzeuge[existing] = fz; }
-  else { fahrzeuge.unshift(fz); }
-  saveFahrzeuge(fahrzeuge);
+  const s = sb();
+  if (s) {
+    // Prüfen ob Kennzeichen schon existiert → update oder insert
+    const { data: existing } = await s.from('fahrzeuge').select('id').eq('kennzeichen', kz).maybeSingle();
+    if (existing) {
+      await s.from('fahrzeuge').update(fzData).eq('kennzeichen', kz);
+    } else {
+      await s.from('fahrzeuge').insert(fzData);
+    }
+  } else {
+    // Fallback localStorage
+    const fahrzeuge = JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]');
+    const idx = fahrzeuge.findIndex(f => f.kennzeichen === kz);
+    const fzLocal = { ...fzData, id: idx >= 0 ? fahrzeuge[idx].id : Date.now() };
+    if (idx >= 0) fahrzeuge[idx] = fzLocal; else fahrzeuge.unshift(fzLocal);
+    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fahrzeuge));
+  }
 
   // Felder leeren
   ['fz-kennzeichen','fz-marke','fz-modell','fz-baujahr','fz-farbe','fz-vin',
@@ -1491,19 +1518,25 @@ function saveFahrzeug() {
   document.getElementById('fz-mfk-status').value = 'OK';
   document.getElementById('fz-gutachten').value = '';
 
-  renderFahrzeuge();
+  await renderFahrzeuge();
   alert('✅ Fahrzeug gespeichert!');
 }
 
-function deleteFahrzeug(id) {
+async function deleteFahrzeug(id) {
   if (!confirm('Fahrzeug wirklich löschen?')) return;
-  const fz = getFahrzeuge().filter(f => f.id !== id);
-  saveFahrzeuge(fz);
-  renderFahrzeuge();
+  const s = sb();
+  if (s) {
+    await s.from('fahrzeuge').delete().eq('id', id);
+  } else {
+    const fz = JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]').filter(f => f.id !== id);
+    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fz));
+  }
+  await renderFahrzeuge();
 }
 
-function editFahrzeug(id) {
-  const fz = getFahrzeuge().find(f => f.id === id);
+async function editFahrzeug(id) {
+  const alle = await getFahrzeuge();
+  const fz = alle.find(f => f.id === id);
   if (!fz) return;
   document.getElementById('fz-kennzeichen').value = fz.kennzeichen || '';
   document.getElementById('fz-marke').value = fz.marke || '';
@@ -1520,7 +1553,6 @@ function editFahrzeug(id) {
   document.getElementById('fz-mfk-naechste').value = fz.mfk?.naechste || '';
   document.getElementById('fz-mfk-status').value = fz.mfk?.status || 'OK';
   document.getElementById('fz-gutachten').value = fz.gutachten || '';
-  document.getElementById('fz-eintragung').value = fz.eintragung || '';
   document.getElementById('fz-bemerkung').value = fz.bemerkung || '';
   window.scrollTo(0, 0);
 }
@@ -1550,8 +1582,8 @@ function mfkStatusColor(fz) {
   return '#1A5276';
 }
 
-function renderFahrzeuge(liste) {
-  const fahrzeuge = liste || getFahrzeuge();
+async function renderFahrzeuge(liste) {
+  const fahrzeuge = liste || await getFahrzeuge();
   const el = document.getElementById('fz-liste');
   const stats = document.getElementById('fz-stats');
   if (!el) return;
@@ -1614,12 +1646,12 @@ function renderFahrzeuge(liste) {
   }).join('');
 }
 
-function sucheFahrzeug() {
+async function sucheFahrzeug() {
   const q = document.getElementById('fz-suche')?.value.trim().toLowerCase();
   const el = document.getElementById('fz-suchergebnis');
   if (!q || !el) { if(el) el.innerHTML=''; return; }
   
-  const alle = getFahrzeuge();
+  const alle = await getFahrzeuge();
   const treffer = alle.filter(fz =>
     fz.kennzeichen?.toLowerCase().includes(q) ||
     fz.marke?.toLowerCase().includes(q) ||
@@ -1640,12 +1672,13 @@ function sucheFahrzeug() {
 }
 
 
-function updateFahrzeugDropdown() {
+async function updateFahrzeugDropdown() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">— Fahrzeug wählen —</option>';
-  getFahrzeuge().forEach(fz => {
+  const fahrzeuge = await getFahrzeuge();
+  fahrzeuge.forEach(fz => {
     const o = document.createElement('option');
     o.value = fz.id;
     o.textContent = fz.kennzeichen + ' — ' + fz.marke + ' ' + (fz.modell||'') + (fz.halter?.nachname ? ' (' + fz.halter.nachname + ')' : '');
@@ -1654,11 +1687,12 @@ function updateFahrzeugDropdown() {
   sel.value = cur;
 }
 
-function zeigeAktuelleEintragungen() {
+async function zeigeAktuelleEintragungen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   const el = document.getElementById('fz-aktuelle-eintragungen');
   if (!sel?.value || !el) { if(el) el.innerHTML=''; return; }
-  const fz = getFahrzeuge().find(f => f.id == sel.value);
+  const alle = await getFahrzeuge();
+  const fz = alle.find(f => f.id == sel.value);
   if (!fz) return;
   const ein = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
   const gutachtenInfo = fz.gutachten ? `<div style="margin-top:8px;font-size:12px"><span style="color:var(--gray)">Gutachten: </span><span style="background:var(--gold-l);color:var(--gold);padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600">${fz.gutachten}</span></div>` : '';
@@ -1669,16 +1703,15 @@ function zeigeAktuelleEintragungen() {
     : `<div style="font-size:12px;color:#AAA">Noch keine Eintragungen ${mfkInfo}</div>`) + gutachtenInfo;
 }
 
-function nachtragen() {
+async function nachtragen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel?.value) { alert('Bitte zuerst ein Fahrzeug auswählen.'); return; }
   const eintragungKeys = ['felgen','reifen','slick','semislick','rennreifen','strassenreifen','fahrwerk','spoiler','bodykit','breitbau','turbo','motor','auspuff','licht','neon','aero','sonstiges'];
   const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',slick:'🏁 Slick',semislick:'🏎️ Semislick',rennreifen:'🏆 Rennreifen',strassenreifen:'🛣️ Strassenreifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',sonstiges:'📝 Sonstiges'};
   const neu = eintragungKeys.filter(k => document.getElementById('fz-nt-'+k)?.checked).map(k => eintragungLabels[k]);
   const bem = document.getElementById('fz-nt-bemerkung')?.value.trim();
-  // Alles optional - nur Fahrzeug muss gewählt sein (bereits oben geprüft)
 
-  const fahrzeuge = getFahrzeuge();
+  const fahrzeuge = await getFahrzeuge();
   const idx = fahrzeuge.findIndex(f => f.id == sel.value);
   if (idx < 0) return;
 
@@ -1686,39 +1719,47 @@ function nachtragen() {
   const alle = [...new Set([...bestehend, ...neu])];
   fahrzeuge[idx].eintragung = alle.join(', ');
   if (bem) fahrzeuge[idx].bemerkung = (fahrzeuge[idx].bemerkung ? fahrzeuge[idx].bemerkung + ' | ' : '') + bem;
-  // Gutachten aktualisieren
   const ntGutachten = document.getElementById('fz-nt-gutachten')?.value;
   if (ntGutachten) fahrzeuge[idx].gutachten = ntGutachten;
-  // MFK Status aktualisieren
   const ntMfkStatus = document.getElementById('fz-nt-mfk-status')?.value;
   if (ntMfkStatus && ntMfkStatus !== '') {
     if (!fahrzeuge[idx].mfk) fahrzeuge[idx].mfk = {};
     fahrzeuge[idx].mfk.status = ntMfkStatus;
   }
 
-  saveFahrzeuge(fahrzeuge);
+  // Supabase Update
+  const s = sb();
+  if (s) {
+    await s.from('fahrzeuge').update({
+      eintragung: fahrzeuge[idx].eintragung,
+      bemerkung: fahrzeuge[idx].bemerkung,
+      gutachten: fahrzeuge[idx].gutachten,
+      mfk: fahrzeuge[idx].mfk,
+    }).eq('id', fahrzeuge[idx].id);
+  } else {
+    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fahrzeuge));
+  }
+
   eintragungKeys.forEach(k => { const el=document.getElementById('fz-nt-'+k); if(el) el.checked=false; });
   const bemEl = document.getElementById('fz-nt-bemerkung'); if(bemEl) bemEl.value='';
   const gtEl = document.getElementById('fz-nt-gutachten'); if(gtEl) gtEl.value='';
   const mfkEl = document.getElementById('fz-nt-mfk-status'); if(mfkEl) mfkEl.value='';
-  // Keep fahrzeug selected and refresh display
-  zeigeAktuelleEintragungen();
-  renderFahrzeuge();
-  // Show success with updated status
-  const updFz = getFahrzeuge().find(f => f.id == sel.value);
+  await zeigeAktuelleEintragungen();
+  await renderFahrzeuge();
+  const updFz = fahrzeuge[idx];
   const statusInfo = updFz?.mfk?.status ? ' · MFK: ' + updFz.mfk.status : '';
   alert('✅ Gespeichert!' + statusInfo);
 }
 
 
 // ══ HALTERABFRAGE ══
-function halterSuche() {
+async function halterSuche() {
   const q = document.getElementById('halter-suche')?.value.trim().toLowerCase();
   const el = document.getElementById('halter-ergebnis');
   const statsEl = document.getElementById('halter-stats');
   if (!el) return;
 
-  const alle = getFahrzeuge();
+  const alle = await getFahrzeuge();
 
   // Stats
   const faellig = alle.filter(f => {
