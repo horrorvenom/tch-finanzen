@@ -412,6 +412,29 @@ tbody td{padding:8px 9px;}
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-teilegutachten" style="width:15px;height:15px;accent-color:#6C3483"> 📋 Teilegutachten</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-sonstiges" style="width:15px;height:15px;accent-color:#6C3483"> 📝 Sonstiges</label>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="form-group">
+          <label>Gutachten aktualisieren</label>
+          <select id="fz-nt-gutachten" style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
+            <option value="">— nicht ändern —</option>
+            <option value="Teilegutachten Standard">📋 Teilegutachten Standard</option>
+            <option value="Teilegutachten Komplex">📋 Teilegutachten Komplex</option>
+            <option value="DTC Standard">📄 DTC Gutachten Standard</option>
+            <option value="DTC Massiv">📄 DTC Gutachten Massiv</option>
+            <option value="DTC Sonderanfertigung">📄 DTC Sonderanfertigung</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>MFK Status aktualisieren</label>
+          <select id="fz-nt-mfk-status" style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
+            <option value="">— nicht ändern —</option>
+            <option value="OK">✅ Bestanden</option>
+            <option value="Ausstehend">⏳ Ausstehend</option>
+            <option value="Nicht bestanden">❌ Nicht bestanden</option>
+            <option value="Abgelaufen">⚠️ Abgelaufen</option>
+          </select>
+        </div>
+      </div>
       <div class="form-group" style="margin-bottom:12px">
         <label>Bemerkung zur Eintragung</label>
         <input type="text" id="fz-nt-bemerkung" placeholder="z.B. Zulassung ausstehend..." style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
@@ -1320,10 +1343,12 @@ function zeigeAktuelleEintragungen() {
   const fz = getFahrzeuge().find(f => f.id == sel.value);
   if (!fz) return;
   const ein = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
-  el.innerHTML = ein.length
-    ? `<div style="font-size:12px;color:var(--gray);margin-bottom:6px">Aktuelle Eintragungen:</div>
+  const gutachtenInfo = fz.gutachten ? `<div style="margin-top:8px;font-size:12px"><span style="color:var(--gray)">Gutachten: </span><span style="background:var(--gold-l);color:var(--gold);padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600">${fz.gutachten}</span></div>` : '';
+  const mfkInfo = fz.mfk?.status ? `<span style="margin-left:8px;font-size:12px;color:var(--gray)">MFK: <strong>${fz.mfk.status}</strong></span>` : '';
+  el.innerHTML = (ein.length
+    ? `<div style="font-size:12px;color:var(--gray);margin-bottom:6px">Aktuelle Eintragungen: ${mfkInfo}</div>
        <div style="display:flex;flex-wrap:wrap;gap:6px">${ein.map(e=>`<span style="background:var(--purple-l);color:var(--purple);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:600">${e}</span>`).join('')}</div>`
-    : '<div style="font-size:12px;color:#AAA">Noch keine Eintragungen</div>';
+    : `<div style="font-size:12px;color:#AAA">Noch keine Eintragungen ${mfkInfo}</div>`) + gutachtenInfo;
 }
 
 function nachtragen() {
@@ -1343,10 +1368,18 @@ function nachtragen() {
   const alle = [...new Set([...bestehend, ...neu])];
   fahrzeuge[idx].eintragung = alle.join(', ');
   if (bem) fahrzeuge[idx].bemerkung = (fahrzeuge[idx].bemerkung ? fahrzeuge[idx].bemerkung + ' | ' : '') + bem;
+  // Gutachten aktualisieren
+  const ntGutachten = document.getElementById('fz-nt-gutachten')?.value;
+  if (ntGutachten) fahrzeuge[idx].gutachten = ntGutachten;
+  // MFK Status aktualisieren
+  const ntMfkStatus = document.getElementById('fz-nt-mfk-status')?.value;
+  if (ntMfkStatus) { if(!fahrzeuge[idx].mfk) fahrzeuge[idx].mfk={}; fahrzeuge[idx].mfk.status = ntMfkStatus; }
 
   saveFahrzeuge(fahrzeuge);
   eintragungKeys.forEach(k => { const el=document.getElementById('fz-nt-'+k); if(el) el.checked=false; });
   const bemEl = document.getElementById('fz-nt-bemerkung'); if(bemEl) bemEl.value='';
+  const gtEl = document.getElementById('fz-nt-gutachten'); if(gtEl) gtEl.value='';
+  const mfkEl = document.getElementById('fz-nt-mfk-status'); if(mfkEl) mfkEl.value='';
   zeigeAktuelleEintragungen();
   renderFahrzeuge();
   alert('✅ Eintragung gespeichert!');
