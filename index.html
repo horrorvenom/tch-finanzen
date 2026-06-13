@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TCH App v20260613091118 -->
+<!-- TCH App v20260613120001 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -660,6 +660,16 @@ async function doLogin() {
 
   const s=sb();
   if(s){
+    // Check banned list before login
+    if(email!==CEO_EMAIL){
+      const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
+      if(bannedData?.value){
+        try{
+          const bannedList=JSON.parse(bannedData.value);
+          if(bannedList.includes(email)){err.textContent='❌ Dieser Account wurde gesperrt. Bitte den CEO kontaktieren.';return;}
+        }catch(e){}
+      }
+    }
     const {data,error}=await s.auth.signInWithPassword({email,password:pass});
     if(error){err.textContent='❌ '+error.message;return;}
     const {data:prof}=await s.from('profiles').select('*').eq('id',data.user.id).single();
@@ -725,6 +735,23 @@ async function doRegister() {
 function doLogout(){CU=null;sb()?.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
 async function startApp(){
+  // Prüfe ob aktiver User gebannt wurde (z.B. während laufender Session)
+  if(CU&&CU.email&&CU.email!==CEO_EMAIL){
+    const s=sb();
+    if(s){
+      const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
+      if(bannedData?.value){
+        try{
+          const bannedList=JSON.parse(bannedData.value);
+          if(bannedList.includes(CU.email)){
+            doLogout();
+            alert('⛔ Dein Account wurde gesperrt. Bitte den CEO kontaktieren.');
+            return;
+          }
+        }catch(e){}
+      }
+    }
+  }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const b=document.getElementById('nav-badge');
@@ -814,9 +841,25 @@ async function addMitarbeiter(){
   const lohn=parseFloat(document.getElementById('ma-lohn').value)||0;
   const prov=parseFloat(document.getElementById('ma-prov').value)||0;
   if(!name||!rang){alert('Name und Rang sind Pflicht.');return;}
-  const perms = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter']
-    .filter(p => document.getElementById('perm-'+p)?.checked);
+  const perms=['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter']
+    .filter(p=>document.getElementById('perm-'+p)?.checked);
   await dbIns('mitarbeiter',{name,email,rang,lohn,provision:prov,permissions:JSON.stringify(perms)});
+  // E-Mail aus Ban-Liste entfernen falls vorhanden
+  if(email){
+    const s=sb();
+    if(s){
+      try{
+        const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
+        if(bannedData?.value){
+          let bannedList=JSON.parse(bannedData.value);
+          if(bannedList.includes(email)){
+            bannedList=bannedList.filter(e=>e!==email);
+            await s.from('settings').upsert({key:'banned_emails',value:JSON.stringify(bannedList),notiz:'Entsperrt beim Neuanlegen'});
+          }
+        }
+      }catch(e){}
+    }
+  }
   ['ma-name','ma-email','ma-lohn','ma-prov'].forEach(id=>document.getElementById(id).value='');
   // Reset permissions to default
   ['einnahmen','mfk','halter'].forEach(p=>{const el=document.getElementById('perm-'+p);if(el)el.checked=true;});
@@ -831,12 +874,19 @@ async function delMA(id){
   const m=mas.find(x=>x.id===id);
   // Delete from mitarbeiter table
   await dbDel('mitarbeiter',id);
-  // Delete from profiles table (blocks login check)
   const s=sb();
   if(s&&m?.email){
+    // 1. Delete from profiles table (blocks whitelist login check)
     await s.from('profiles').delete().eq('email',m.email);
+    // 2. Add email to banned list in settings (blocks active sessions)
+    const {data:banned}=await s.from('settings').select('*').eq('key','banned_emails').maybeSingle();
+    let bannedList=[];
+    if(banned?.value){try{bannedList=JSON.parse(banned.value);}catch(e){bannedList=[];}}
+    if(!bannedList.includes(m.email))bannedList.push(m.email);
+    await s.from('settings').upsert({key:'banned_emails',value:JSON.stringify(bannedList),notiz:'Auto-gebannt beim Löschen'});
   }
   renderAll();
+  alert('✅ Mitarbeiter gelöscht. Login-Zugang wurde gesperrt.');
 }
 async function updProv(id,v){await dbUpd('mitarbeiter',id,{provision:parseFloat(v)||0});renderAll();}
 async function updLohn(id,v){if(!isCEO())return;await dbUpd('mitarbeiter',id,{lohn:parseFloat(v)||0});renderAll();}
