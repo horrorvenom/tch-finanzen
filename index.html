@@ -781,24 +781,42 @@ async function renderMitarbeiter(){
     const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
     const p=mEBez*(m.provision||0)/100;
     const c=rc(m.rang);
-    return `<div class="ma-list-item">
-      <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
-      <div style="flex:1;min-width:90px">
-        <div style="font-weight:600;font-size:13px">${m.name}</div>
-        <div style="font-size:11px;color:var(--gray)">${m.rang}${m.email?' · '+m.email:''}</div>
+    const perms=m.permissions?JSON.parse(m.permissions):['einnahmen','mfk','halter'];
+    const tabInfo=[
+      {k:'einnahmen',l:'💰 Einnahmen'},
+      {k:'ausgaben',l:'💸 Ausgaben'},
+      {k:'mitarbeiter',l:'👥 Mitarbeiter'},
+      {k:'auswertung',l:'📈 Auswertung'},
+      {k:'monat',l:'🗓️ Monat'},
+      {k:'mfk',l:'🚗 MFK'},
+      {k:'halter',l:'🔍 Halter'}
+    ];
+    return `<div style="background:white;border-radius:10px;border:1px solid #EEE;margin-bottom:8px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;flex-wrap:wrap">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
+        <div style="flex:1;min-width:90px">
+          <div style="font-weight:600;font-size:13px">${m.name}</div>
+          <div style="font-size:11px;color:var(--gray)">${m.rang}${m.email?' · '+m.email:''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+          <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Provision%</div>
+          <input class="pct-input" type="number" min="0" max="100" step="0.5" value="${m.provision||0}" onchange="updProv(${m.id},this.value)" ${!isCEO()?'disabled':''}>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+          <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Lohn/Mt.</div>
+          <input type="number" min="0" step="100" value="${m.lohn||0}" onchange="updLohn(${m.id},this.value)" ${!isCEO()?'disabled':''} style="width:85px;border:1.5px solid #DDE;border-radius:6px;padding:4px 7px;font-size:12px;text-align:right;outline:none">
+        </div>
+        ${mE>0?`<div style="font-size:11px;text-align:right"><div style="color:var(--green);font-weight:600">${fmt(mE)}</div><div style="color:var(--gold)">Prov: ${fmt(p)}</div></div>`:''}
+        ${isCEO()?`<button class="btn btn-ghost btn-sm" onclick="delMA(${m.id})" title="Löschen">✕</button>`:''}
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-        <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Provision%</div>
-        <input class="pct-input" type="number" min="0" max="100" step="0.5" value="${m.provision||0}" onchange="updProv(${m.id},this.value)" ${!isCEO()?'disabled':''}>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-        <div style="font-size:9px;color:var(--gray);text-transform:uppercase">Lohn/Mt.</div>
-        <input type="number" min="0" step="100" value="${m.lohn||0}" onchange="updLohn(${m.id},this.value)" ${!isCEO()?'disabled':''} style="width:85px;border:1.5px solid #DDE;border-radius:6px;padding:4px 7px;font-size:12px;text-align:right;outline:none">
-      </div>
-      ${mE>0?`<div style="font-size:11px;text-align:right"><div style="color:var(--green);font-weight:600">${fmt(mE)}</div><div style="color:var(--gold)">Prov: ${fmt(p)}</div></div>`:''}
-      ${isCEO()?`<button class="btn btn-ghost btn-sm" onclick="delMA(${m.id})">✕</button>`:''}
+      ${isCEO()?`<div style="padding:8px 14px 12px;background:#FAFAFA;border-top:1px solid #F0F0F0">
+        <div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">🔐 Zugriffsrechte — klick zum umschalten</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${tabInfo.map(t=>`<span onclick="togglePerm(${m.id},'${t.k}')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;${perms.includes(t.k)?'background:#D5F5E3;color:#1E8449;border:1.5px solid #1E8449':'background:#F4F6F7;color:#AAA;border:1.5px solid #DDE'}">${t.l} ${perms.includes(t.k)?'✓':'+'}</span>`).join('')}
+        </div>
+      </div>`:''}
     </div>`;
-  }).join('');
+  }).join('');;
 }
 
 // ══ EINNAHMEN ══
