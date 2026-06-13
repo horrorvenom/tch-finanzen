@@ -1796,27 +1796,13 @@ async function savePerms(id) {
   alert('✅ Zugriffsrechte gespeichert!');
 }
 
-// ══ AUTO-LOGIN ══
+// ══ AUTO-LOGIN DEAKTIVIERT ══
+// Jedes Mal neu einloggen erforderlich
 (async()=>{
   const s=sb();
   if(s){
-    const {data: sessionData}=await s.auth.getSession(); const session = sessionData?.session;
-    if(session){
-      // Check if email is allowed
-      if(session.user.email !== CEO_EMAIL) {
-        const {data} = await s.from('mitarbeiter').select('*').eq('email', session.user.email);
-        if(!data || data.length === 0) { await s.auth.signOut(); return; }
-      }
-      const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
-      CU={email:session.user.email,role:session.user.email===CEO_EMAIL?'ceo':(p?.role||'ma'),name:p?.name||session.user.email};
-      // Auto-create profile if missing
-      if(!p){
-        const ma=await s.from('mitarbeiter').select('*').eq('email',session.user.email).maybeSingle();
-        await s.from('profiles').upsert({id:session.user.id,name:ma.data?.name||session.user.email,email:session.user.email,role:session.user.email===CEO_EMAIL?'ceo':'ma'});
-      }
-      await loadKonto();
-      startApp();
-    }
+    // Session beim Laden immer beenden → zwing zum erneuten Login
+    await s.auth.signOut();
   }
 })();
 
