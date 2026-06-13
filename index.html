@@ -349,11 +349,12 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Gutachten</label>
           <select id="fz-gutachten">
             <option value="">— keines —</option>
-            <option value="Teilegutachten Standard">Teilegutachten Standard</option>
-            <option value="Teilegutachten Komplex">Teilegutachten Komplex</option>
-            <option value="DTC Standard">DTC Gutachten Standard</option>
-            <option value="DTC Massiv">DTC Gutachten Massiv</option>
-            <option value="DTC Sonderanfertigung">DTC Sonderanfertigung</option>
+            <option value="Einzeleintragung">📝 Einzeleintragung</option>
+            <option value="Teilegutachten Standard">📋 Teilegutachten Standard</option>
+            <option value="Teilegutachten Komplex">📋 Teilegutachten Komplex</option>
+            <option value="DTC Standard">📄 DTC Gutachten Standard</option>
+            <option value="DTC Massiv">📄 DTC Gutachten Massiv</option>
+            <option value="DTC Sonderanfertigung">📄 DTC Sonderanfertigung</option>
           </select>
         </div>
         <div class="form-group"><label>Bemerkung</label><input type="text" id="fz-bemerkung" placeholder="Notizen..."></div>
@@ -362,6 +363,10 @@ tbody td{padding:8px 9px;}
       <div id="fz-eintragungen-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:14px">
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-felgen" style="width:15px;height:15px;accent-color:#1A5276"> 🔧 Felgen</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-reifen" style="width:15px;height:15px;accent-color:#1A5276"> 🔄 Andere Reifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-slick" style="width:15px;height:15px;accent-color:#1A5276"> 🏁 Slick</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-semislick" style="width:15px;height:15px;accent-color:#1A5276"> 🏎️ Semislick</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-rennreifen" style="width:15px;height:15px;accent-color:#1A5276"> 🏆 Rennreifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-strassenreifen" style="width:15px;height:15px;accent-color:#1A5276"> 🛣️ Strassenreifen</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-fahrwerk" style="width:15px;height:15px;accent-color:#1A5276"> ⬇️ Fahrwerk / Tieferlegung</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-spoiler" style="width:15px;height:15px;accent-color:#1A5276"> 💨 Spoiler</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-bodykit" style="width:15px;height:15px;accent-color:#1A5276"> 🚗 Bodykit</label>
@@ -372,8 +377,6 @@ tbody td{padding:8px 9px;}
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-licht" style="width:15px;height:15px;accent-color:#1A5276"> 💡 Licht / LED</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-neon" style="width:15px;height:15px;accent-color:#1A5276"> 🌈 Neon / Unterbodenbeleuchtung</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-aero" style="width:15px;height:15px;accent-color:#1A5276"> ✈️ Aerodynamik-Teile</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-dtc" style="width:15px;height:15px;accent-color:#1A5276"> 📄 DTC Gutachten</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-teilegutachten" style="width:15px;height:15px;accent-color:#1A5276"> 📋 Teilegutachten</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-sonstiges" style="width:15px;height:15px;accent-color:#1A5276"> 📝 Sonstiges</label>
       </div>
       <div class="form-group" style="margin-bottom:14px">
@@ -398,6 +401,10 @@ tbody td{padding:8px 9px;}
       <div id="fz-nachtragen-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-felgen" style="width:15px;height:15px;accent-color:#6C3483"> 🔧 Felgen</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-reifen" style="width:15px;height:15px;accent-color:#6C3483"> 🔄 Andere Reifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-slick" style="width:15px;height:15px;accent-color:#6C3483"> 🏁 Slick</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-semislick" style="width:15px;height:15px;accent-color:#6C3483"> 🏎️ Semislick</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-rennreifen" style="width:15px;height:15px;accent-color:#6C3483"> 🏆 Rennreifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-strassenreifen" style="width:15px;height:15px;accent-color:#6C3483"> 🛣️ Strassenreifen</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-fahrwerk" style="width:15px;height:15px;accent-color:#6C3483"> ⬇️ Fahrwerk / Tieferlegung</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-spoiler" style="width:15px;height:15px;accent-color:#6C3483"> 💨 Spoiler</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-bodykit" style="width:15px;height:15px;accent-color:#6C3483"> 🚗 Bodykit</label>
@@ -408,8 +415,6 @@ tbody td{padding:8px 9px;}
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-licht" style="width:15px;height:15px;accent-color:#6C3483"> 💡 Licht / LED</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-neon" style="width:15px;height:15px;accent-color:#6C3483"> 🌈 Neon / Unterbodenbeleuchtung</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-aero" style="width:15px;height:15px;accent-color:#6C3483"> ✈️ Aerodynamik-Teile</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-dtc" style="width:15px;height:15px;accent-color:#6C3483"> 📄 DTC Gutachten</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-teilegutachten" style="width:15px;height:15px;accent-color:#6C3483"> 📋 Teilegutachten</label>
         <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-sonstiges" style="width:15px;height:15px;accent-color:#6C3483"> 📝 Sonstiges</label>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -417,6 +422,7 @@ tbody td{padding:8px 9px;}
           <label>Gutachten aktualisieren</label>
           <select id="fz-nt-gutachten" style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
             <option value="">— nicht ändern —</option>
+            <option value="Einzeleintragung">📝 Einzeleintragung</option>
             <option value="Teilegutachten Standard">📋 Teilegutachten Standard</option>
             <option value="Teilegutachten Komplex">📋 Teilegutachten Komplex</option>
             <option value="DTC Standard">📄 DTC Gutachten Standard</option>
@@ -1355,7 +1361,7 @@ function nachtragen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel?.value) { alert('Bitte zuerst ein Fahrzeug auswählen.'); return; }
   const eintragungKeys = ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'];
-  const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',dtc:'📄 DTC Gutachten',teilegutachten:'📋 Teilegutachten',sonstiges:'📝 Sonstiges'};
+  const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',slick:'🏁 Slick',semislick:'🏎️ Semislick',rennreifen:'🏆 Rennreifen',strassenreifen:'🛣️ Strassenreifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',sonstiges:'📝 Sonstiges'};
   const neu = eintragungKeys.filter(k => document.getElementById('fz-nt-'+k)?.checked).map(k => eintragungLabels[k]);
   const bem = document.getElementById('fz-nt-bemerkung')?.value.trim();
   if (!neu.length) { alert('Bitte mindestens eine Eintragung auswählen.'); return; }
