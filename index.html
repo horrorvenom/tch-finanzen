@@ -243,7 +243,20 @@ tbody td{padding:8px 9px;}
           <div class="form-group"><label>Monatslohn (CHF)</label><input type="number" id="ma-lohn" placeholder="0" min="0"></div>
           <div class="form-group"><label>Provision %</label><input type="number" id="ma-prov" placeholder="0" min="0" max="100" step="0.5"></div>
         </div>
-        <button class="btn btn-dark" onclick="addMitarbeiter()">✚ Mitarbeiter hinzufügen</button>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🔐 Tab-Zugriffsrechte</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-einnahmen" checked style="width:14px;height:14px;accent-color:#1E8449"> 💰 Einnahmen</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-ausgaben" style="width:14px;height:14px;accent-color:#C0392B"> 💸 Ausgaben</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-mitarbeiter" style="width:14px;height:14px;accent-color:#1C1C1E"> 👥 Mitarbeiter</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-auswertung" style="width:14px;height:14px;accent-color:#1A5276"> 📈 Auswertung</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-monat" style="width:14px;height:14px;accent-color:#D4A017"> 🗓️ Monatsbericht</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-mfk" checked style="width:14px;height:14px;accent-color:#1A5276"> 🚗 MFK / Fahrzeuge</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="perm-halter" checked style="width:14px;height:14px;accent-color:#1A5276"> 🔍 Halterabfrage</label>
+        </div>
+        <div style="font-size:11px;color:#AAA;margin-top:6px">💡 Dashboard ist immer sichtbar. CEO hat immer Vollzugriff.</div>
+      </div>
+      <button class="btn btn-dark" onclick="addMitarbeiter()">✚ Mitarbeiter hinzufügen</button>
       </div>
     </div>
     <div class="card">
@@ -523,6 +536,23 @@ async function doLogin() {
   const err=document.getElementById('login-err');
   err.textContent=''; err.style.color='var(--red)';
   if(!email||!pass){err.textContent='Bitte E-Mail und Passwort eingeben.';return;}
+
+  // Prüfe ob E-Mail erlaubt ist (CEO oder in Mitarbeiterliste)
+  if(email !== CEO_EMAIL) {
+    const s=sb();
+    let erlaubt = false;
+    if(s) {
+      const {data} = await s.from('mitarbeiter').select('email').eq('email', email);
+      erlaubt = data && data.length > 0;
+    } else {
+      erlaubt = L.mitarbeiter?.some(m => m.email === email);
+    }
+    if(!erlaubt) {
+      err.textContent='❌ Diese E-Mail ist nicht registriert. Bitte den CEO kontaktieren.';
+      return;
+    }
+  }
+
   const s=sb();
   if(s){
     const {data,error}=await s.auth.signInWithPassword({email,password:pass});
@@ -534,7 +564,7 @@ async function doLogin() {
     // Demo
     if(email===CEO_EMAIL){CU={email,role:'ceo',name:'Momo Sinclair'};}
     else {
-      const ma=L.mitarbeiter.find(m=>m.email===email);
+      const ma=L.mitarbeiter?.find(m=>m.email===email);
       if(ma&&pass.length>=4){CU={email,role:'ma',name:ma.name};}
       else{err.textContent='❌ Unbekannte E-Mail oder falsches Passwort.';return;}
     }
@@ -546,13 +576,34 @@ async function doRegister() {
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
   const err=document.getElementById('login-err');
+  err.textContent=''; err.style.color='var(--red)';
+  if(!email||!pass){err.textContent='Bitte E-Mail und Passwort eingeben.';return;}
+
+  // CEO kann sich immer registrieren
+  if(email !== CEO_EMAIL) {
+    // Prüfe ob E-Mail vom CEO angelegt wurde
+    const s=sb();
+    let erlaubt = false;
+    if(s) {
+      const {data} = await s.from('mitarbeiter').select('email').eq('email', email);
+      erlaubt = data && data.length > 0;
+    } else {
+      erlaubt = L.mitarbeiter?.some(m => m.email === email);
+    }
+    if(!erlaubt) {
+      err.textContent='❌ Diese E-Mail wurde nicht vom CEO freigegeben. Bitte den CEO kontaktieren.';
+      return;
+    }
+  }
+
   const s=sb();
   if(!s){err.textContent='ℹ️ Supabase nötig. Demo: ceo@tch.ch / tch2026';return;}
-  const signupRole = email===CEO_EMAIL ? 'ceo' : 'ma';
   const {error}=await s.auth.signUp({email,password:pass});
   if(error){err.textContent='❌ '+error.message;}
-  else{err.style.color='green';err.textContent='✅ Bestätigungsmail gesendet!';}
+  else{err.style.color='green';err.textContent='✅ Konto erstellt! Du kannst dich jetzt anmelden.';}
 }
+
+
 
 function doLogout(){CU=null;sb()?.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
@@ -566,6 +617,7 @@ function startApp(){
   document.getElementById('ma-locked').style.display=isCEO()?'none':'flex';
   document.getElementById('konto-edit').style.display=isCEO()?'flex':'none';
   document.getElementById('ein-datum').valueAsDate=new Date();
+  applyPermissions();
   buildErsatzteileDropdown();
   document.getElementById('aus-datum').valueAsDate=new Date();
   const now=new Date();
@@ -643,8 +695,13 @@ async function addMitarbeiter(){
   const lohn=parseFloat(document.getElementById('ma-lohn').value)||0;
   const prov=parseFloat(document.getElementById('ma-prov').value)||0;
   if(!name||!rang){alert('Name und Rang sind Pflicht.');return;}
-  await dbIns('mitarbeiter',{name,email,rang,lohn,provision:prov});
+  const perms = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter']
+    .filter(p => document.getElementById('perm-'+p)?.checked);
+  await dbIns('mitarbeiter',{name,email,rang,lohn,provision:prov,permissions:JSON.stringify(perms)});
   ['ma-name','ma-email','ma-lohn','ma-prov'].forEach(id=>document.getElementById(id).value='');
+  // Reset permissions to default
+  ['einnahmen','mfk','halter'].forEach(p=>{const el=document.getElementById('perm-'+p);if(el)el.checked=true;});
+  ['ausgaben','mitarbeiter','auswertung','monat'].forEach(p=>{const el=document.getElementById('perm-'+p);if(el)el.checked=false;});
   document.getElementById('ma-rang').value='';
   renderAll();
 }
@@ -1565,21 +1622,45 @@ function renderHalterListe(fahrzeuge, el, q) {
   }).join('');
 }
 
-// ══ RENDER ALL ══
-async function renderAll(){
-  renderKonto();
-  await renderOffeneRechnungen();
-  await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+
+// ══ ZUGRIFFSRECHTE ══
+function editPerms(id) {
+  const allData = JSON.parse(localStorage.getItem('tch')||'{}');
+  const mas = allData.mitarbeiter || [];
+  const m = mas.find(x=>x.id===id);
+  if (!m) return;
+  const cur = JSON.parse(m.permissions||'["einnahmen","mfk","halter"]');
+  const tabs = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter'];
+  const labels = {
+    einnahmen:'&#x1F4B0; Einnahmen',
+    ausgaben:'&#x1F4B8; Ausgaben',
+    mitarbeiter:'&#x1F465; Mitarbeiter',
+    auswertung:'&#x1F4C8; Auswertung',
+    monat:'&#x1F5D3;&#xFE0F; Monatsbericht',
+    mfk:'&#x1F697; MFK / Fahrzeuge',
+    halter:'&#x1F50D; Halterabfrage'
+  };
+
+  let checkboxes = '';
+  tabs.forEach(t => {
+    const chk = cur.includes(t) ? 'checked' : '';
+    checkboxes += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px;margin-bottom:6px">' +
+      '<input type="checkbox" id="ep-' + t + '" ' + chk + ' style="width:14px;height:14px"> ' +
+      labels[t] + '</label>';
+  });
+
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML = '<div style="background:white;border-radius:14px;padding:24px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)">' +
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px">&#x1F510; Zugriffsrechte</div>' +
+    '<div style="font-size:13px;color:#888;margin-bottom:16px">' + m.name + ' (' + m.rang + ')</div>' +
+    '<div style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;margin-bottom:10px">Erlaubte Tabs</div>' +
+    checkboxes +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button onclick="savePerms(' + id + ')" style="flex:1;background:#1C1C1E;color:white;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600;cursor:pointer">&#x1F4BE; Speichern</button>' +
+    '<button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;background:none;border:1.5px solid #DDE;border-radius:8px;padding:10px;font-size:14px;cursor:pointer">Abbrechen</button>' +
+    '</div></div>';
+  document.body.appendChild(div);
 }
 
-// ══ AUTO-LOGIN ══
-(async()=>{
-  const s=sb();
-  if(s){
-    const {data: sessionData}=await s.auth.getSession(); const session = sessionData?.session;
-    if(session){const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).single();CU={email:session.user.email,role:p?.role||'ma',name:p?.name||session.user.email};await loadKonto();startApp();}
-  }
-})();
-</script>
-</body>
-</html>
+
