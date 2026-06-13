@@ -529,16 +529,32 @@ const fmtD = d => { if(!d)return '—'; try{return new Date(d).toLocaleDateStrin
 const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstattleiter':'#1A5276','Abschlepper-Mechaniker':'#6C3483','Lehrling':'#1E8449'}[r]||'#555');
 const isCEO = () => CU?.role==='ceo';
 
-function applyPermissions() {
+async function applyPermissions() {
   if (isCEO()) return;
-  const mas = L.mitarbeiter || [];
-  const m = mas.find(x => x.email === CU?.email);
-  const perms = m?.permissions ? JSON.parse(m.permissions) : ['einnahmen','mfk','halter'];
   const allTabs = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter'];
+  // Load fresh from Supabase or local
+  let perms = ['einnahmen','mfk','halter']; // default
+  try {
+    const mas = await dbGet('mitarbeiter');
+    const m = mas.find(x => x.email === CU?.email);
+    if (m?.permissions) perms = JSON.parse(m.permissions);
+  } catch(e) {}
+  // Apply to nav tabs
   allTabs.forEach(tab => {
     const navTab = document.querySelector('[onclick*="showTab(\''+tab+'\')"]');
     if (navTab) navTab.style.display = perms.includes(tab) ? '' : 'none';
   });
+  // If current active tab is now hidden, go to dashboard
+  const activeSection = document.querySelector('.section.active');
+  if (activeSection) {
+    const tabId = activeSection.id.replace('tab-','');
+    if (tabId !== 'dashboard' && !perms.includes(tabId)) {
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(s=>s.classList.remove('active'));
+      document.getElementById('tab-dashboard')?.classList.add('active');
+      document.querySelector('[onclick*="showTab(\'dashboard\')"]')?.classList.add('active');
+    }
+  }
 }
 
 
@@ -555,6 +571,9 @@ async function togglePerm(id, tab) {
     perms.push(tab);
   }
   await dbUpd('mitarbeiter', id, {permissions: JSON.stringify(perms)});
+  // Update local cache too
+  const localIdx = (L.mitarbeiter||[]).findIndex(x=>x.id===id);
+  if(localIdx>=0){ L.mitarbeiter[localIdx].permissions=JSON.stringify(perms); sl(); }
   renderAll();
 }
 
@@ -567,7 +586,7 @@ async function updRang(id, val) {
 
 // ══ RENDER ALL ══
 async function renderAll(){
-  applyPermissions();
+  await applyPermissions();
   renderKonto();
   await renderOffeneRechnungen();
   await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
@@ -667,7 +686,7 @@ async function doRegister() {
 
 function doLogout(){CU=null;sb()?.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
-function startApp(){
+async function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const b=document.getElementById('nav-badge');
@@ -677,7 +696,7 @@ function startApp(){
   document.getElementById('ma-locked').style.display=isCEO()?'none':'flex';
   document.getElementById('konto-edit').style.display=isCEO()?'flex':'none';
   document.getElementById('ein-datum').valueAsDate=new Date();
-  applyPermissions();
+  await applyPermissions();
   buildErsatzteileDropdown();
   document.getElementById('aus-datum').valueAsDate=new Date();
   const now=new Date();
