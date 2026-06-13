@@ -1669,6 +1669,34 @@ function editPerms(id) {
     '</div></div>';
   document.body.appendChild(div);
 }
+
+// ══ RENDER ALL ══
+async function renderAll(){
+  applyPermissions();
+  renderKonto();
+  await renderOffeneRechnungen();
+  await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+}
+
+// ══ AUTO-LOGIN ══
+(async()=>{
+  const s=sb();
+  if(s){
+    const {data: sessionData}=await s.auth.getSession(); const session = sessionData?.session;
+    if(session){
+      // Check if email is allowed
+      if(session.user.email !== CEO_EMAIL) {
+        const {data} = await s.from('mitarbeiter').select('*').eq('email', session.user.email);
+        if(!data || data.length === 0) { await s.auth.signOut(); return; }
+      }
+      const {data:p}=await s.from('profiles').select('*').eq('id',session.user.id).single();
+      CU={email:session.user.email,role:session.user.email===CEO_EMAIL?'ceo':(p?.role||'ma'),name:p?.name||session.user.email};
+      await loadKonto();
+      startApp();
+    }
+  }
+})();
+
 </script>
 </body>
 </html>
