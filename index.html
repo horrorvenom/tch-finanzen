@@ -356,10 +356,67 @@ tbody td{padding:8px 9px;}
             <option value="DTC Sonderanfertigung">DTC Sonderanfertigung</option>
           </select>
         </div>
-        <div class="form-group"><label>Eintragung</label><input type="text" id="fz-eintragung" placeholder="z.B. Felgen, Fahrwerk..."></div>
         <div class="form-group"><label>Bemerkung</label><input type="text" id="fz-bemerkung" placeholder="Notizen..."></div>
       </div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;margin-top:4px">📋 Eintragungen</div>
+      <div id="fz-eintragungen-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-felgen" style="width:15px;height:15px;accent-color:#1A5276"> 🔧 Felgen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-reifen" style="width:15px;height:15px;accent-color:#1A5276"> 🔄 Andere Reifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-fahrwerk" style="width:15px;height:15px;accent-color:#1A5276"> ⬇️ Fahrwerk / Tieferlegung</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-spoiler" style="width:15px;height:15px;accent-color:#1A5276"> 💨 Spoiler</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-bodykit" style="width:15px;height:15px;accent-color:#1A5276"> 🚗 Bodykit</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-breitbau" style="width:15px;height:15px;accent-color:#1A5276"> ↔️ Breitbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-turbo" style="width:15px;height:15px;accent-color:#1A5276"> ⚡ Turboumbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-motor" style="width:15px;height:15px;accent-color:#1A5276"> 🔩 Motorumbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-auspuff" style="width:15px;height:15px;accent-color:#1A5276"> 💨 Auspuffanlage</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-licht" style="width:15px;height:15px;accent-color:#1A5276"> 💡 Licht / LED</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-neon" style="width:15px;height:15px;accent-color:#1A5276"> 🌈 Neon / Unterbodenbeleuchtung</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-aero" style="width:15px;height:15px;accent-color:#1A5276"> ✈️ Aerodynamik-Teile</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-dtc" style="width:15px;height:15px;accent-color:#1A5276"> 📄 DTC Gutachten</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-teilegutachten" style="width:15px;height:15px;accent-color:#1A5276"> 📋 Teilegutachten</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-ein-sonstiges" style="width:15px;height:15px;accent-color:#1A5276"> 📝 Sonstiges</label>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Zusätzliche Bemerkung zu Eintragungen</label>
+        <input type="text" id="fz-ein-bemerkung" placeholder="z.B. Zulassung ausstehend, Datum..." style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
+      </div>
       <button class="btn btn-blue" onclick="saveFahrzeug()">✚ Fahrzeug speichern</button>
+    </div>
+
+    <!-- Eintragung nachtragen -->
+    <div class="card" style="border-left:4px solid var(--purple)">
+      <div class="card-title" style="color:var(--purple)">📋 Eintragung nachtragen</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+        <div class="form-group" style="flex:1;min-width:200px">
+          <label>Fahrzeug auswählen</label>
+          <select id="fz-nachtragen-sel" onchange="zeigeAktuelleEintragungen()" style="border:1.5px solid var(--purple);border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
+            <option value="">— Fahrzeug wählen —</option>
+          </select>
+        </div>
+      </div>
+      <div id="fz-aktuelle-eintragungen" style="margin-bottom:14px"></div>
+      <div id="fz-nachtragen-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-felgen" style="width:15px;height:15px;accent-color:#6C3483"> 🔧 Felgen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-reifen" style="width:15px;height:15px;accent-color:#6C3483"> 🔄 Andere Reifen</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-fahrwerk" style="width:15px;height:15px;accent-color:#6C3483"> ⬇️ Fahrwerk / Tieferlegung</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-spoiler" style="width:15px;height:15px;accent-color:#6C3483"> 💨 Spoiler</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-bodykit" style="width:15px;height:15px;accent-color:#6C3483"> 🚗 Bodykit</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-breitbau" style="width:15px;height:15px;accent-color:#6C3483"> ↔️ Breitbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-turbo" style="width:15px;height:15px;accent-color:#6C3483"> ⚡ Turboumbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-motor" style="width:15px;height:15px;accent-color:#6C3483"> 🔩 Motorumbau</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-auspuff" style="width:15px;height:15px;accent-color:#6C3483"> 💨 Auspuffanlage</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-licht" style="width:15px;height:15px;accent-color:#6C3483"> 💡 Licht / LED</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-neon" style="width:15px;height:15px;accent-color:#6C3483"> 🌈 Neon / Unterbodenbeleuchtung</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-aero" style="width:15px;height:15px;accent-color:#6C3483"> ✈️ Aerodynamik-Teile</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-dtc" style="width:15px;height:15px;accent-color:#6C3483"> 📄 DTC Gutachten</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-teilegutachten" style="width:15px;height:15px;accent-color:#6C3483"> 📋 Teilegutachten</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#F4F6F7;border-radius:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="fz-nt-sonstiges" style="width:15px;height:15px;accent-color:#6C3483"> 📝 Sonstiges</label>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Bemerkung zur Eintragung</label>
+        <input type="text" id="fz-nt-bemerkung" placeholder="z.B. Zulassung ausstehend..." style="border:1.5px solid #DDE;border-radius:7px;padding:8px 12px;font-size:13px;outline:none;width:100%">
+      </div>
+      <button class="btn" style="background:var(--purple);color:white" onclick="nachtragen()">✚ Eintragung speichern</button>
     </div>
 
     <!-- Fahrzeugliste -->
@@ -1090,7 +1147,7 @@ function saveFahrzeug() {
       status: document.getElementById('fz-mfk-status').value,
     },
     gutachten: document.getElementById('fz-gutachten').value,
-    eintragung: document.getElementById('fz-eintragung').value.trim(),
+    eintragung: ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'].filter(k=>document.getElementById('fz-ein-'+k)?.checked).join(', '),
     bemerkung: document.getElementById('fz-bemerkung').value.trim(),
     erfasst: new Date().toISOString(),
   };
@@ -1102,8 +1159,9 @@ function saveFahrzeug() {
   // Felder leeren
   ['fz-kennzeichen','fz-marke','fz-modell','fz-baujahr','fz-farbe','fz-vin',
    'fz-halter-vorname','fz-halter-nachname','fz-halter-tel','fz-halter-email',
-   'fz-halter-adresse','fz-mfk-datum','fz-mfk-naechste','fz-eintragung','fz-bemerkung']
+   'fz-halter-adresse','fz-mfk-datum','fz-mfk-naechste','fz-bemerkung','fz-ein-bemerkung']
     .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'].forEach(k => { const el=document.getElementById('fz-ein-'+k); if(el) el.checked=false; });
   document.getElementById('fz-mfk-status').value = 'OK';
   document.getElementById('fz-gutachten').value = '';
 
@@ -1169,6 +1227,7 @@ function renderFahrzeuge(liste) {
     return tage !== null && tage >= 0 && tage <= 30;
   });
 
+  updateFahrzeugDropdown();
   if (stats) stats.innerHTML = `${fahrzeuge.length} Fahrzeuge · ${faellig.length > 0 ? `<span style="color:var(--red);font-weight:600">⚠️ ${faellig.length} überfällig</span> · ` : ''}${bald.length > 0 ? `<span style="color:var(--gold)">${bald.length} bald fällig</span>` : ''}`;
 
   if (!fahrzeuge.length) {
@@ -1237,6 +1296,60 @@ function sucheFahrzeug() {
 
   el.innerHTML = `<div style="color:var(--blue);font-size:12px;margin-bottom:8px">${treffer.length} Treffer</div>`;
   renderFahrzeuge(treffer);
+}
+
+
+function updateFahrzeugDropdown() {
+  const sel = document.getElementById('fz-nachtragen-sel');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Fahrzeug wählen —</option>';
+  getFahrzeuge().forEach(fz => {
+    const o = document.createElement('option');
+    o.value = fz.id;
+    o.textContent = fz.kennzeichen + ' — ' + fz.marke + ' ' + (fz.modell||'') + (fz.halter?.nachname ? ' (' + fz.halter.nachname + ')' : '');
+    sel.appendChild(o);
+  });
+  sel.value = cur;
+}
+
+function zeigeAktuelleEintragungen() {
+  const sel = document.getElementById('fz-nachtragen-sel');
+  const el = document.getElementById('fz-aktuelle-eintragungen');
+  if (!sel?.value || !el) { if(el) el.innerHTML=''; return; }
+  const fz = getFahrzeuge().find(f => f.id == sel.value);
+  if (!fz) return;
+  const ein = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
+  el.innerHTML = ein.length
+    ? `<div style="font-size:12px;color:var(--gray);margin-bottom:6px">Aktuelle Eintragungen:</div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px">${ein.map(e=>`<span style="background:var(--purple-l);color:var(--purple);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:600">${e}</span>`).join('')}</div>`
+    : '<div style="font-size:12px;color:#AAA">Noch keine Eintragungen</div>';
+}
+
+function nachtragen() {
+  const sel = document.getElementById('fz-nachtragen-sel');
+  if (!sel?.value) { alert('Bitte zuerst ein Fahrzeug auswählen.'); return; }
+  const eintragungKeys = ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'];
+  const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',dtc:'📄 DTC Gutachten',teilegutachten:'📋 Teilegutachten',sonstiges:'📝 Sonstiges'};
+  const neu = eintragungKeys.filter(k => document.getElementById('fz-nt-'+k)?.checked).map(k => eintragungLabels[k]);
+  const bem = document.getElementById('fz-nt-bemerkung')?.value.trim();
+  if (!neu.length) { alert('Bitte mindestens eine Eintragung auswählen.'); return; }
+
+  const fahrzeuge = getFahrzeuge();
+  const idx = fahrzeuge.findIndex(f => f.id == sel.value);
+  if (idx < 0) return;
+
+  const bestehend = fahrzeuge[idx].eintragung ? fahrzeuge[idx].eintragung.split(', ').filter(Boolean) : [];
+  const alle = [...new Set([...bestehend, ...neu])];
+  fahrzeuge[idx].eintragung = alle.join(', ');
+  if (bem) fahrzeuge[idx].bemerkung = (fahrzeuge[idx].bemerkung ? fahrzeuge[idx].bemerkung + ' | ' : '') + bem;
+
+  saveFahrzeuge(fahrzeuge);
+  eintragungKeys.forEach(k => { const el=document.getElementById('fz-nt-'+k); if(el) el.checked=false; });
+  const bemEl = document.getElementById('fz-nt-bemerkung'); if(bemEl) bemEl.value='';
+  zeigeAktuelleEintragungen();
+  renderFahrzeuge();
+  alert('✅ Eintragung gespeichert!');
 }
 
 // ══ RENDER ALL ══
