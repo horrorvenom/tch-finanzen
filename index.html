@@ -542,6 +542,22 @@ function applyPermissions() {
 }
 
 
+
+async function togglePerm(id, tab) {
+  if (!isCEO()) return;
+  const mas = await dbGet('mitarbeiter');
+  const m = mas.find(x => x.id === id);
+  if (!m) return;
+  let perms = m.permissions ? JSON.parse(m.permissions) : ['einnahmen','mfk','halter'];
+  if (perms.includes(tab)) {
+    perms = perms.filter(p => p !== tab);
+  } else {
+    perms.push(tab);
+  }
+  await dbUpd('mitarbeiter', id, {permissions: JSON.stringify(perms)});
+  renderAll();
+}
+
 // ══ RENDER ALL ══
 async function renderAll(){
   applyPermissions();
