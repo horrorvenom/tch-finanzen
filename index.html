@@ -584,6 +584,44 @@ async function updRang(id, val) {
   renderAll();
 }
 
+
+// ══ ECHTZEIT-ZUGRIFFSRECHTE ══
+function startRealtimePermissions() {
+  const s = sb();
+  if (!s || isCEO()) return; // Nur für Mitarbeiter, nicht CEO
+
+  // Supabase Realtime - überwache Änderungen an der mitarbeiter Tabelle
+  const channel = s.channel('permissions-changes')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'mitarbeiter',
+      filter: 'email=eq.' + CU.email
+    }, async (payload) => {
+      console.log('🔄 Zugriffsrechte aktualisiert!', payload);
+      // Lokalen Cache updaten
+      const idx = (L.mitarbeiter||[]).findIndex(m=>m.email===CU.email);
+      if(idx>=0 && payload.new?.permissions) {
+        L.mitarbeiter[idx].permissions = payload.new.permissions;
+        sl();
+      }
+      // Tabs sofort neu anwenden
+      await applyPermissions();
+      // Benutzer informieren
+      showPermNotification();
+    })
+    .subscribe();
+}
+
+function showPermNotification() {
+  // Kurze Benachrichtigung anzeigen
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:70px;right:20px;background:#1C1C1E;color:white;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:opacity .3s';
+  el.innerHTML = '🔄 Zugriffsrechte wurden aktualisiert';
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, 3000);
+}
+
 // ══ RENDER ALL ══
 async function renderAll(){
   await applyPermissions();
@@ -698,6 +736,8 @@ async function startApp(){
   document.getElementById('ein-datum').valueAsDate=new Date();
   await applyPermissions();
   buildErsatzteileDropdown();
+  // Echtzeit-Updates für Zugriffsrechte
+  startRealtimePermissions();
   document.getElementById('aus-datum').valueAsDate=new Date();
   const now=new Date();
   if(document.getElementById('monat-sel'))document.getElementById('monat-sel').value=now.getMonth();
