@@ -1289,7 +1289,6 @@ function renderFahrzeuge(liste) {
           <div style="font-weight:700;font-size:14px">${fz.marke} ${fz.modell || ''} ${fz.baujahr ? '('+fz.baujahr+')' : ''}</div>
           <div style="font-size:11px;color:var(--gray)">${fz.farbe ? fz.farbe+' · ' : ''}${fz.vin ? 'VIN: '+fz.vin : ''}</div>
         </div>
-        ${mfkStatusBadge(fz)}
         <button class="btn btn-ghost btn-sm" onclick="editFahrzeug(${fz.id})" style="margin-left:8px">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteFahrzeug(${fz.id})">✕</button>
       </div>
@@ -1392,16 +1391,23 @@ function nachtragen() {
   if (ntGutachten) fahrzeuge[idx].gutachten = ntGutachten;
   // MFK Status aktualisieren
   const ntMfkStatus = document.getElementById('fz-nt-mfk-status')?.value;
-  if (ntMfkStatus) { if(!fahrzeuge[idx].mfk) fahrzeuge[idx].mfk={}; fahrzeuge[idx].mfk.status = ntMfkStatus; }
+  if (ntMfkStatus && ntMfkStatus !== '') {
+    if (!fahrzeuge[idx].mfk) fahrzeuge[idx].mfk = {};
+    fahrzeuge[idx].mfk.status = ntMfkStatus;
+  }
 
   saveFahrzeuge(fahrzeuge);
   eintragungKeys.forEach(k => { const el=document.getElementById('fz-nt-'+k); if(el) el.checked=false; });
   const bemEl = document.getElementById('fz-nt-bemerkung'); if(bemEl) bemEl.value='';
   const gtEl = document.getElementById('fz-nt-gutachten'); if(gtEl) gtEl.value='';
   const mfkEl = document.getElementById('fz-nt-mfk-status'); if(mfkEl) mfkEl.value='';
+  // Keep fahrzeug selected and refresh display
   zeigeAktuelleEintragungen();
   renderFahrzeuge();
-  alert('✅ Eintragung gespeichert!');
+  // Show success with updated status
+  const updFz = getFahrzeuge().find(f => f.id == sel.value);
+  const statusInfo = updFz?.mfk?.status ? ' · MFK: ' + updFz.mfk.status : '';
+  alert('✅ Gespeichert!' + statusInfo);
 }
 
 // ══ RENDER ALL ══
