@@ -1282,33 +1282,35 @@ function renderFahrzeuge(liste) {
     const isAlert = fz.mfk?.status === 'Nicht bestanden' || fz.mfk?.status === 'Abgelaufen' || (tage !== null && tage < 0);
     const isBald = tage !== null && tage >= 0 && tage <= 30;
 
-    return `<div class="fz-card" style="border-left:4px solid ${mfkStatusColor(fz)}">
-      <div class="fz-header" style="border-bottom:2px solid ${mfkStatusColor(fz)}20">
-        <div style="background:${mfkStatusColor(fz)};color:white;padding:5px 12px;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:.05em">${fz.kennzeichen}</div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:14px">${fz.marke} ${fz.modell || ''} ${fz.baujahr ? '('+fz.baujahr+')' : ''}</div>
-          <div style="font-size:11px;color:var(--gray)">${fz.farbe ? fz.farbe+' · ' : ''}${fz.vin ? 'VIN: '+fz.vin : ''}</div>
+    return `<div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.09);margin-bottom:14px;border-top:4px solid ${mfkStatusColor(fz)}">
+      <div style="padding:14px 18px;display:flex;align-items:center;gap:12px;background:#FAFAFA;border-bottom:1px solid #F0F0F0;flex-wrap:wrap">
+        <div style="background:${mfkStatusColor(fz)};color:white;padding:6px 16px;border-radius:8px;font-weight:800;font-size:15px;letter-spacing:.08em;text-align:center">${fz.kennzeichen}</div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-weight:700;font-size:16px;color:#1C1C1E">${fz.marke} ${fz.modell||''} <span style="font-weight:400;color:#888">${fz.baujahr?'('+fz.baujahr+')':''}</span></div>
+          <div style="font-size:12px;color:#888;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap">${fz.farbe?'🎨 '+fz.farbe:''}${fz.vin?' · VIN: '+fz.vin:''}</div>
         </div>
         ${mfkStatusBadge(fz)}
-        <button class="btn btn-ghost btn-sm" onclick="editFahrzeug(${fz.id})" style="margin-left:8px">✏️</button>
-        <button class="btn btn-ghost btn-sm" onclick="deleteFahrzeug(${fz.id})">✕</button>
+        <button onclick="editFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✏️</button>
+        <button onclick="deleteFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
       </div>
-      <div class="fz-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-        <div>
-          <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;margin-bottom:6px">👤 Halter</div>
-          <div class="fz-row"><span class="fz-label">Name</span><span class="fz-val">${halterName}</span></div>
-          ${fz.halter?.tel ? `<div class="fz-row"><span class="fz-label">Telefon</span><span class="fz-val"><a href="tel:${fz.halter.tel}" style="color:var(--blue)">${fz.halter.tel}</a></span></div>` : ''}
-          ${fz.halter?.email ? `<div class="fz-row"><span class="fz-label">E-Mail</span><span class="fz-val"><a href="mailto:${fz.halter.email}" style="color:var(--blue)">${fz.halter.email}</a></span></div>` : ''}
-          ${fz.halter?.adresse ? `<div class="fz-row"><span class="fz-label">Adresse</span><span class="fz-val">${fz.halter.adresse}</span></div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
+          <div style="font-size:10px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px"><span style="background:#D6EAF8;padding:3px 8px;border-radius:4px">👤 Halter</span></div>
+          <div style="font-size:15px;font-weight:700;color:#1C1C1E;margin-bottom:6px">${halterName}</div>
+          ${fz.halter?.tel?`<div style="font-size:13px;margin-bottom:4px">📞 <a href="tel:${fz.halter.tel}" style="color:#1A5276;font-weight:600;text-decoration:none">${fz.halter.tel}</a></div>`:''}
+          ${fz.halter?.email?`<div style="font-size:12px;margin-bottom:4px">✉️ <a href="mailto:${fz.halter.email}" style="color:#1A5276;text-decoration:none">${fz.halter.email}</a></div>`:''}
+          ${fz.halter?.adresse?`<div style="font-size:12px;color:#888;margin-top:4px">📍 ${fz.halter.adresse}</div>`:''}
         </div>
-        <div>
-          <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;margin-bottom:6px">🔧 MFK</div>
-
-          ${fz.mfk?.datum ? `<div class="fz-row"><span class="fz-label">Letzte MFK</span><span class="fz-val">${fmtD(fz.mfk.datum)}</span></div>` : ''}
-          ${fz.mfk?.naechste ? `<div class="fz-row"><span class="fz-label">Nächste MFK</span><span class="fz-val" style="color:${mfkStatusColor(fz)};font-weight:600">${fmtD(fz.mfk.naechste)}${tage !== null ? ' ('+tage+' Tage)' : ''}</span></div>` : ''}
-          ${fz.gutachten ? `<div class="fz-row"><span class="fz-label">Gutachten</span><span class="fz-val">${fz.gutachten}</span></div>` : ''}
-          ${fz.eintragung ? `<div class="fz-row"><span class="fz-label">Eintragung</span><span class="fz-val">${fz.eintragung}</span></div>` : ''}
-          ${fz.bemerkung ? `<div class="fz-row"><span class="fz-label">Bemerkung</span><span class="fz-val">${fz.bemerkung}</span></div>` : ''}
+        <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
+          <div style="font-size:10px;font-weight:700;color:#1E8449;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px"><span style="background:#D5F5E3;padding:3px 8px;border-radius:4px">🔧 MFK & Prüfung</span></div>
+          ${fz.mfk?.datum?`<div style="font-size:12px;color:#888;margin-bottom:4px">Letzte MFK: <strong style="color:#1C1C1E">${fmtD(fz.mfk.datum)}</strong></div>`:''}
+          ${fz.mfk?.naechste?`<div style="font-size:12px;margin-bottom:6px">Nächste MFK: <strong style="color:${mfkStatusColor(fz)}">${fmtD(fz.mfk.naechste)}${tage!==null?' ('+tage+' Tage)':''}</strong></div>`:''}
+          ${fz.gutachten?`<div style="margin-top:6px"><span style="background:#FFF8E1;color:#D4A017;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700">📋 ${fz.gutachten}</span></div>`:''}
+          ${fz.bemerkung?`<div style="font-size:11px;color:#888;margin-top:6px;font-style:italic">💬 ${fz.bemerkung}</div>`:''}
+        </div>
+        <div style="padding:14px 18px">
+          <div style="font-size:10px;font-weight:700;color:#6C3483;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px"><span style="background:#E8DAEF;padding:3px 8px;border-radius:4px">📋 Eintragungen</span></div>
+          ${fz.eintragung?`<div style="display:flex;flex-wrap:wrap;gap:5px">${fz.eintragung.split(', ').filter(Boolean).map(e=>`<span style="background:#F4F6F7;border:1px solid #DDE;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600">${e}</span>`).join('')}</div>`:'<div style="font-size:12px;color:#AAA">Noch keine Eintragungen</div>'}
         </div>
       </div>
     </div>`;
@@ -1373,18 +1375,11 @@ function zeigeAktuelleEintragungen() {
 function nachtragen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel?.value) { alert('Bitte zuerst ein Fahrzeug auswählen.'); return; }
-  const eintragungKeys = ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'];
+  const eintragungKeys = ['felgen','reifen','slick','semislick','rennreifen','strassenreifen','fahrwerk','spoiler','bodykit','breitbau','turbo','motor','auspuff','licht','neon','aero','sonstiges'];
   const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',slick:'🏁 Slick',semislick:'🏎️ Semislick',rennreifen:'🏆 Rennreifen',strassenreifen:'🛣️ Strassenreifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',sonstiges:'📝 Sonstiges'};
   const neu = eintragungKeys.filter(k => document.getElementById('fz-nt-'+k)?.checked).map(k => eintragungLabels[k]);
   const bem = document.getElementById('fz-nt-bemerkung')?.value.trim();
-  // Checkboxen optional
-  const ntGutachtenCheck = document.getElementById('fz-nt-gutachten')?.value;
-  const ntMfkCheck = document.getElementById('fz-nt-mfk-status')?.value;
-  const bemCheck = document.getElementById('fz-nt-bemerkung')?.value.trim();
-  if (!neu.length && !ntGutachtenCheck && !ntMfkCheck && !bemCheck) {
-    alert('Bitte mindestens eine Eintragung, Gutachten, MFK-Status oder Bemerkung angeben.');
-    return;
-  }
+  // Alles optional - nur Fahrzeug muss gewählt sein (bereits oben geprüft)
 
   const fahrzeuge = getFahrzeuge();
   const idx = fahrzeuge.findIndex(f => f.id == sel.value);
