@@ -84,6 +84,16 @@ tbody td{padding:8px 9px;}
 .ai-input{flex:1;background:var(--dark3);border:1.5px solid var(--dark3);border-radius:7px;padding:8px 12px;color:white;font-size:12px;font-family:var(--font);outline:none;}
 .ai-input:focus{border-color:var(--gold);}
 .locked-msg{display:flex;align-items:center;gap:9px;background:var(--red-l);border:1.5px solid var(--red);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;font-weight:600;margin-bottom:14px;}
+.fz-card{background:white;border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:10px;}
+.fz-header{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #F0F0F0;}
+.fz-body{padding:12px 16px;}
+.fz-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F8F8F8;font-size:12px;}
+.fz-row:last-child{border-bottom:none;}
+.fz-label{color:var(--gray);}
+.fz-val{font-weight:600;}
+.status-ok{background:#D5F5E3;color:#1E8449;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.status-bald{background:#FFF3CD;color:#D4A017;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.status-faellig{background:#FADBD8;color:#C0392B;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
 @media(max-width:600px){.stats{grid-template-columns:1fr 1fr;}.form-grid{grid-template-columns:1fr;}}
@@ -116,6 +126,7 @@ tbody td{padding:8px 9px;}
   <div class="nav-tab" onclick="showTab('mitarbeiter')">👥 Mitarbeiter</div>
   <div class="nav-tab" onclick="showTab('auswertung')">📈 Auswertung</div>
   <div class="nav-tab" onclick="showTab('monat')">🗓️ Monatsbericht</div>
+  <div class="nav-tab" onclick="showTab('mfk')">🚗 MFK / Fahrzeuge</div>
   <div class="nav-user">
     <span class="nav-badge" id="nav-badge">—</span>
     <span class="nav-logout" onclick="doLogout()">Abmelden</span>
@@ -288,6 +299,80 @@ tbody td{padding:8px 9px;}
   </div>
 
 </div>
+  <!-- MFK / FAHRZEUGE -->
+  <div id="tab-mfk" class="section">
+
+    <!-- Suchleiste Halterabfrage -->
+    <div class="card" style="border-left:4px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue)">🔍 Halterabfrage</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:200px">
+          <label>Kennzeichen oder Halter suchen</label>
+          <input type="text" id="fz-suche" placeholder="z.B. ZH 123456 oder Max Müster" oninput="sucheFahrzeug()" style="border:1.5px solid var(--blue);border-radius:7px;padding:8px 12px;font-size:14px;outline:none;width:100%">
+        </div>
+        <button class="btn btn-blue" onclick="sucheFahrzeug()">🔍 Suchen</button>
+      </div>
+      <div id="fz-suchergebnis" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Neues Fahrzeug erfassen -->
+    <div class="card">
+      <div class="card-title">🚗 Neues Fahrzeug erfassen</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Kennzeichen</label><input type="text" id="fz-kennzeichen" placeholder="z.B. ZH 123456" style="text-transform:uppercase"></div>
+        <div class="form-group"><label>Marke</label><input type="text" id="fz-marke" placeholder="z.B. BMW"></div>
+        <div class="form-group"><label>Modell</label><input type="text" id="fz-modell" placeholder="z.B. 320i"></div>
+        <div class="form-group"><label>Baujahr</label><input type="number" id="fz-baujahr" placeholder="z.B. 2018" min="1900" max="2099"></div>
+        <div class="form-group"><label>Farbe</label><input type="text" id="fz-farbe" placeholder="z.B. Schwarz"></div>
+        <div class="form-group"><label>Fahrgestellnummer (VIN)</label><input type="text" id="fz-vin" placeholder="z.B. WBA3A5G5XDN..." style="text-transform:uppercase"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;margin-top:4px">👤 Halter</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Vorname</label><input type="text" id="fz-halter-vorname" placeholder="Vorname"></div>
+        <div class="form-group"><label>Nachname</label><input type="text" id="fz-halter-nachname" placeholder="Nachname"></div>
+        <div class="form-group"><label>Telefon</label><input type="text" id="fz-halter-tel" placeholder="+41 79 123 45 67"></div>
+        <div class="form-group"><label>E-Mail</label><input type="email" id="fz-halter-email" placeholder="kunde@email.ch"></div>
+        <div class="form-group"><label>Adresse</label><input type="text" id="fz-halter-adresse" placeholder="Musterstrasse 1, 8000 Zürich"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;margin-top:4px">🔧 MFK & Status</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Letzte MFK</label><input type="date" id="fz-mfk-datum"></div>
+        <div class="form-group"><label>Nächste MFK</label><input type="date" id="fz-mfk-naechste"></div>
+        <div class="form-group"><label>MFK Status</label>
+          <select id="fz-mfk-status">
+            <option value="OK">✅ Bestanden</option>
+            <option value="Ausstehend">⏳ Ausstehend</option>
+            <option value="Nicht bestanden">❌ Nicht bestanden</option>
+            <option value="Abgelaufen">⚠️ Abgelaufen</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Gutachten</label>
+          <select id="fz-gutachten">
+            <option value="">— keines —</option>
+            <option value="Teilegutachten Standard">Teilegutachten Standard</option>
+            <option value="Teilegutachten Komplex">Teilegutachten Komplex</option>
+            <option value="DTC Standard">DTC Gutachten Standard</option>
+            <option value="DTC Massiv">DTC Gutachten Massiv</option>
+            <option value="DTC Sonderanfertigung">DTC Sonderanfertigung</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Eintragung</label><input type="text" id="fz-eintragung" placeholder="z.B. Felgen, Fahrwerk..."></div>
+        <div class="form-group"><label>Bemerkung</label><input type="text" id="fz-bemerkung" placeholder="Notizen..."></div>
+      </div>
+      <button class="btn btn-blue" onclick="saveFahrzeug()">✚ Fahrzeug speichern</button>
+    </div>
+
+    <!-- Fahrzeugliste -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">🚗 Alle Fahrzeuge</div>
+        <div id="fz-stats" style="font-size:12px;color:var(--gray)"></div>
+      </div>
+      <div id="fz-liste"><div style="color:#AAA;text-align:center;padding:20px">Keine Fahrzeuge erfasst</div></div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
@@ -378,6 +463,7 @@ function showTab(t){
   event.target.classList.add('active');
   renderAll();
   if(t==='monat')renderMonat();
+  if(t==='mfk')renderFahrzeuge();
 }
 
 // ══ DB LAYER ══
@@ -963,6 +1049,194 @@ async function renderOffeneRechnungen() {
       </div>
     </div>`;
   }).join('') + (offen.length > 10 ? `<div style="color:#AAA;font-size:11px;text-align:center;padding:6px">+${offen.length-10} weitere</div>` : '');
+}
+
+
+// ══ MFK / FAHRZEUGE ══
+// Lokale Fahrzeug-Daten (localStorage für Demo, Supabase wenn verfügbar)
+function getFahrzeuge() {
+  return JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]');
+}
+function saveFahrzeuge(fz) {
+  localStorage.setItem('tch_fahrzeuge', JSON.stringify(fz));
+}
+
+function saveFahrzeug() {
+  const kz = document.getElementById('fz-kennzeichen').value.trim().toUpperCase();
+  const marke = document.getElementById('fz-marke').value.trim();
+  const modell = document.getElementById('fz-modell').value.trim();
+  if (!kz || !marke) { alert('Kennzeichen und Marke sind Pflicht.'); return; }
+
+  const fahrzeuge = getFahrzeuge();
+  const existing = fahrzeuge.findIndex(f => f.kennzeichen === kz);
+
+  const fz = {
+    id: existing >= 0 ? fahrzeuge[existing].id : Date.now(),
+    kennzeichen: kz,
+    marke, modell,
+    baujahr: document.getElementById('fz-baujahr').value,
+    farbe: document.getElementById('fz-farbe').value.trim(),
+    vin: document.getElementById('fz-vin').value.trim().toUpperCase(),
+    halter: {
+      vorname: document.getElementById('fz-halter-vorname').value.trim(),
+      nachname: document.getElementById('fz-halter-nachname').value.trim(),
+      tel: document.getElementById('fz-halter-tel').value.trim(),
+      email: document.getElementById('fz-halter-email').value.trim(),
+      adresse: document.getElementById('fz-halter-adresse').value.trim(),
+    },
+    mfk: {
+      datum: document.getElementById('fz-mfk-datum').value,
+      naechste: document.getElementById('fz-mfk-naechste').value,
+      status: document.getElementById('fz-mfk-status').value,
+    },
+    gutachten: document.getElementById('fz-gutachten').value,
+    eintragung: document.getElementById('fz-eintragung').value.trim(),
+    bemerkung: document.getElementById('fz-bemerkung').value.trim(),
+    erfasst: new Date().toISOString(),
+  };
+
+  if (existing >= 0) { fahrzeuge[existing] = fz; }
+  else { fahrzeuge.unshift(fz); }
+  saveFahrzeuge(fahrzeuge);
+
+  // Felder leeren
+  ['fz-kennzeichen','fz-marke','fz-modell','fz-baujahr','fz-farbe','fz-vin',
+   'fz-halter-vorname','fz-halter-nachname','fz-halter-tel','fz-halter-email',
+   'fz-halter-adresse','fz-mfk-datum','fz-mfk-naechste','fz-eintragung','fz-bemerkung']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('fz-mfk-status').value = 'OK';
+  document.getElementById('fz-gutachten').value = '';
+
+  renderFahrzeuge();
+  alert('✅ Fahrzeug gespeichert!');
+}
+
+function deleteFahrzeug(id) {
+  if (!confirm('Fahrzeug wirklich löschen?')) return;
+  const fz = getFahrzeuge().filter(f => f.id !== id);
+  saveFahrzeuge(fz);
+  renderFahrzeuge();
+}
+
+function editFahrzeug(id) {
+  const fz = getFahrzeuge().find(f => f.id === id);
+  if (!fz) return;
+  document.getElementById('fz-kennzeichen').value = fz.kennzeichen || '';
+  document.getElementById('fz-marke').value = fz.marke || '';
+  document.getElementById('fz-modell').value = fz.modell || '';
+  document.getElementById('fz-baujahr').value = fz.baujahr || '';
+  document.getElementById('fz-farbe').value = fz.farbe || '';
+  document.getElementById('fz-vin').value = fz.vin || '';
+  document.getElementById('fz-halter-vorname').value = fz.halter?.vorname || '';
+  document.getElementById('fz-halter-nachname').value = fz.halter?.nachname || '';
+  document.getElementById('fz-halter-tel').value = fz.halter?.tel || '';
+  document.getElementById('fz-halter-email').value = fz.halter?.email || '';
+  document.getElementById('fz-halter-adresse').value = fz.halter?.adresse || '';
+  document.getElementById('fz-mfk-datum').value = fz.mfk?.datum || '';
+  document.getElementById('fz-mfk-naechste').value = fz.mfk?.naechste || '';
+  document.getElementById('fz-mfk-status').value = fz.mfk?.status || 'OK';
+  document.getElementById('fz-gutachten').value = fz.gutachten || '';
+  document.getElementById('fz-eintragung').value = fz.eintragung || '';
+  document.getElementById('fz-bemerkung').value = fz.bemerkung || '';
+  window.scrollTo(0, 0);
+}
+
+function mfkStatusBadge(fz) {
+  const status = fz.mfk?.status || 'Ausstehend';
+  const naechste = fz.mfk?.naechste;
+  let tage = null;
+  if (naechste) tage = Math.floor((new Date(naechste) - new Date()) / 86400000);
+  
+  if (status === 'Nicht bestanden') return '<span class="status-faellig">❌ Nicht bestanden</span>';
+  if (status === 'Abgelaufen' || (tage !== null && tage < 0)) return '<span class="status-faellig">⚠️ Abgelaufen</span>';
+  if (tage !== null && tage <= 30) return `<span class="status-bald">⏰ MFK in ${tage} Tagen</span>`;
+  if (status === 'OK') return '<span class="status-ok">✅ OK</span>';
+  return '<span class="status-bald">⏳ Ausstehend</span>';
+}
+
+function renderFahrzeuge(liste) {
+  const fahrzeuge = liste || getFahrzeuge();
+  const el = document.getElementById('fz-liste');
+  const stats = document.getElementById('fz-stats');
+  if (!el) return;
+
+  const faellig = fahrzeuge.filter(f => {
+    const tage = f.mfk?.naechste ? Math.floor((new Date(f.mfk.naechste) - new Date()) / 86400000) : null;
+    return f.mfk?.status === 'Nicht bestanden' || f.mfk?.status === 'Abgelaufen' || (tage !== null && tage < 0);
+  });
+  const bald = fahrzeuge.filter(f => {
+    const tage = f.mfk?.naechste ? Math.floor((new Date(f.mfk.naechste) - new Date()) / 86400000) : null;
+    return tage !== null && tage >= 0 && tage <= 30;
+  });
+
+  if (stats) stats.innerHTML = `${fahrzeuge.length} Fahrzeuge · ${faellig.length > 0 ? `<span style="color:var(--red);font-weight:600">⚠️ ${faellig.length} überfällig</span> · ` : ''}${bald.length > 0 ? `<span style="color:var(--gold)">${bald.length} bald fällig</span>` : ''}`;
+
+  if (!fahrzeuge.length) {
+    el.innerHTML = '<div style="color:#AAA;text-align:center;padding:20px">Keine Fahrzeuge erfasst</div>';
+    return;
+  }
+
+  el.innerHTML = fahrzeuge.map(fz => {
+    const halterName = [fz.halter?.vorname, fz.halter?.nachname].filter(Boolean).join(' ') || '—';
+    const tage = fz.mfk?.naechste ? Math.floor((new Date(fz.mfk.naechste) - new Date()) / 86400000) : null;
+    const isAlert = fz.mfk?.status === 'Nicht bestanden' || fz.mfk?.status === 'Abgelaufen' || (tage !== null && tage < 0);
+    const isBald = tage !== null && tage >= 0 && tage <= 30;
+
+    return `<div class="fz-card" style="border-left:4px solid ${isAlert?'#C0392B':isBald?'#D4A017':'#1A5276'}">
+      <div class="fz-header">
+        <div style="background:${isAlert?'#C0392B':isBald?'#D4A017':'#1A5276'};color:white;padding:5px 12px;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:.05em">${fz.kennzeichen}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${fz.marke} ${fz.modell || ''} ${fz.baujahr ? '('+fz.baujahr+')' : ''}</div>
+          <div style="font-size:11px;color:var(--gray)">${fz.farbe ? fz.farbe+' · ' : ''}${fz.vin ? 'VIN: '+fz.vin : ''}</div>
+        </div>
+        ${mfkStatusBadge(fz)}
+        <button class="btn btn-ghost btn-sm" onclick="editFahrzeug(${fz.id})" style="margin-left:8px">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteFahrzeug(${fz.id})">✕</button>
+      </div>
+      <div class="fz-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;margin-bottom:6px">👤 Halter</div>
+          <div class="fz-row"><span class="fz-label">Name</span><span class="fz-val">${halterName}</span></div>
+          ${fz.halter?.tel ? `<div class="fz-row"><span class="fz-label">Telefon</span><span class="fz-val"><a href="tel:${fz.halter.tel}" style="color:var(--blue)">${fz.halter.tel}</a></span></div>` : ''}
+          ${fz.halter?.email ? `<div class="fz-row"><span class="fz-label">E-Mail</span><span class="fz-val"><a href="mailto:${fz.halter.email}" style="color:var(--blue)">${fz.halter.email}</a></span></div>` : ''}
+          ${fz.halter?.adresse ? `<div class="fz-row"><span class="fz-label">Adresse</span><span class="fz-val">${fz.halter.adresse}</span></div>` : ''}
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;margin-bottom:6px">🔧 MFK</div>
+          ${fz.mfk?.datum ? `<div class="fz-row"><span class="fz-label">Letzte MFK</span><span class="fz-val">${fmtD(fz.mfk.datum)}</span></div>` : ''}
+          ${fz.mfk?.naechste ? `<div class="fz-row"><span class="fz-label">Nächste MFK</span><span class="fz-val" style="color:${isAlert?'#C0392B':isBald?'#D4A017':'inherit'}">${fmtD(fz.mfk.naechste)}${tage !== null ? ' ('+tage+' Tage)' : ''}</span></div>` : ''}
+          ${fz.gutachten ? `<div class="fz-row"><span class="fz-label">Gutachten</span><span class="fz-val">${fz.gutachten}</span></div>` : ''}
+          ${fz.eintragung ? `<div class="fz-row"><span class="fz-label">Eintragung</span><span class="fz-val">${fz.eintragung}</span></div>` : ''}
+          ${fz.bemerkung ? `<div class="fz-row"><span class="fz-label">Bemerkung</span><span class="fz-val">${fz.bemerkung}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sucheFahrzeug() {
+  const q = document.getElementById('fz-suche')?.value.trim().toLowerCase();
+  const el = document.getElementById('fz-suchergebnis');
+  if (!q || !el) { if(el) el.innerHTML=''; return; }
+  
+  const alle = getFahrzeuge();
+  const treffer = alle.filter(fz =>
+    fz.kennzeichen?.toLowerCase().includes(q) ||
+    fz.marke?.toLowerCase().includes(q) ||
+    fz.modell?.toLowerCase().includes(q) ||
+    fz.halter?.vorname?.toLowerCase().includes(q) ||
+    fz.halter?.nachname?.toLowerCase().includes(q) ||
+    fz.halter?.tel?.includes(q) ||
+    fz.vin?.toLowerCase().includes(q)
+  );
+
+  if (!treffer.length) {
+    el.innerHTML = '<div style="color:#AAA;font-size:13px;padding:10px 0">Keine Treffer gefunden.</div>';
+    return;
+  }
+
+  el.innerHTML = `<div style="color:var(--blue);font-size:12px;margin-bottom:8px">${treffer.length} Treffer</div>`;
+  renderFahrzeuge(treffer);
 }
 
 // ══ RENDER ALL ══
