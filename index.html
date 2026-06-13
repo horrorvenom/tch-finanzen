@@ -127,6 +127,7 @@ tbody td{padding:8px 9px;}
   <div class="nav-tab" onclick="showTab('auswertung')">📈 Auswertung</div>
   <div class="nav-tab" onclick="showTab('monat')">🗓️ Monatsbericht</div>
   <div class="nav-tab" onclick="showTab('mfk')">🚗 MFK / Fahrzeuge</div>
+  <div class="nav-tab" onclick="showTab('halter')">🔍 Halterabfrage</div>
   <div class="nav-user">
     <span class="nav-badge" id="nav-badge">—</span>
     <span class="nav-logout" onclick="doLogout()">Abmelden</span>
@@ -459,6 +460,37 @@ tbody td{padding:8px 9px;}
 
   </div>
 
+  <!-- HALTERABFRAGE -->
+  <div id="tab-halter" class="section">
+
+    <!-- Suchbox -->
+    <div class="card" style="border-left:4px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue);font-size:16px">🔍 Halterabfrage</div>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px">Suche nach Kennzeichen, Halter, Telefon oder VIN. Nur Ansicht — keine Änderungen möglich.</p>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:220px">
+          <label>Kennzeichen, Name, Telefon oder VIN</label>
+          <input type="text" id="halter-suche" placeholder="z.B. ZH 123456 oder Hans Muster oder 079..." 
+            oninput="halterSuche()"
+            style="border:2px solid var(--blue);border-radius:8px;padding:10px 14px;font-size:15px;outline:none;width:100%">
+        </div>
+        <button class="btn btn-blue" onclick="halterSuche()" style="padding:10px 22px;font-size:14px">🔍 Suchen</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('halter-suche').value='';halterSuche()" style="padding:10px 16px">✕ Leeren</button>
+      </div>
+    </div>
+
+    <!-- Statistik -->
+    <div id="halter-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
+
+    <!-- Ergebnisse -->
+    <div id="halter-ergebnis">
+      <div style="text-align:center;padding:40px;color:#AAA;font-size:14px">
+        🔍 Gib einen Suchbegriff ein um Fahrzeuge und Halter zu finden.
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
@@ -550,6 +582,7 @@ function showTab(t){
   renderAll();
   if(t==='monat')renderMonat();
   if(t==='mfk')renderFahrzeuge();
+  if(t==='halter')halterSuche();
 }
 
 // ══ DB LAYER ══
@@ -1411,6 +1444,125 @@ function nachtragen() {
   const updFz = getFahrzeuge().find(f => f.id == sel.value);
   const statusInfo = updFz?.mfk?.status ? ' · MFK: ' + updFz.mfk.status : '';
   alert('✅ Gespeichert!' + statusInfo);
+}
+
+
+// ══ HALTERABFRAGE ══
+function halterSuche() {
+  const q = document.getElementById('halter-suche')?.value.trim().toLowerCase();
+  const el = document.getElementById('halter-ergebnis');
+  const statsEl = document.getElementById('halter-stats');
+  if (!el) return;
+
+  const alle = getFahrzeuge();
+
+  // Stats
+  const faellig = alle.filter(f => {
+    const s = f.mfk?.status;
+    const tage = f.mfk?.naechste ? Math.floor((new Date(f.mfk.naechste) - new Date()) / 86400000) : null;
+    return s === 'Nicht bestanden' || s === 'Abgelaufen' || (tage !== null && tage < 0);
+  });
+  const bald = alle.filter(f => {
+    const tage = f.mfk?.naechste ? Math.floor((new Date(f.mfk.naechste) - new Date()) / 86400000) : null;
+    return tage !== null && tage >= 0 && tage <= 30;
+  });
+  if (statsEl) statsEl.innerHTML = `
+    <div class="stat blue"><div class="stat-label">Fahrzeuge total</div><div class="stat-value">${alle.length}</div></div>
+    <div class="stat green"><div class="stat-label">MFK OK</div><div class="stat-value">${alle.filter(f=>f.mfk?.status==='OK').length}</div></div>
+    <div class="stat gold"><div class="stat-label">Bald fällig</div><div class="stat-value">${bald.length}</div></div>
+    <div class="stat red"><div class="stat-label">Überfällig</div><div class="stat-value">${faellig.length}</div></div>`;
+
+  if (!q) {
+    // Zeige alle wenn kein Suchbegriff
+    renderHalterListe(alle, el);
+    return;
+  }
+
+  const treffer = alle.filter(fz =>
+    fz.kennzeichen?.toLowerCase().includes(q) ||
+    fz.marke?.toLowerCase().includes(q) ||
+    fz.modell?.toLowerCase().includes(q) ||
+    fz.halter?.vorname?.toLowerCase().includes(q) ||
+    fz.halter?.nachname?.toLowerCase().includes(q) ||
+    fz.halter?.tel?.replace(/\s/g,'').includes(q.replace(/\s/g,'')) ||
+    fz.halter?.email?.toLowerCase().includes(q) ||
+    fz.halter?.adresse?.toLowerCase().includes(q) ||
+    fz.vin?.toLowerCase().includes(q)
+  );
+
+  if (!treffer.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#AAA;font-size:14px">❌ Keine Treffer für "<strong>${q}</strong>"</div>`;
+    return;
+  }
+  renderHalterListe(treffer, el, q);
+}
+
+function highlight(text, q) {
+  if (!q || !text) return text || '—';
+  try {
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp('(' + safe + ')', 'gi');
+    return String(text).replace(regex, '<mark style="background:#FFF176;padding:0 2px;border-radius:3px">$1</mark>');
+  } catch(e) {
+    return String(text || '—');
+  }
+}
+
+function renderHalterListe(fahrzeuge, el, q) {
+  if (!fahrzeuge.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:#AAA">Keine Fahrzeuge erfasst</div>';
+    return;
+  }
+
+  el.innerHTML = `<div style="font-size:12px;color:#888;margin-bottom:12px">${fahrzeuge.length} Fahrzeug${fahrzeuge.length!==1?'e':''} gefunden</div>` +
+  fahrzeuge.map(fz => {
+    const halterName = [fz.halter?.vorname, fz.halter?.nachname].filter(Boolean).join(' ') || '—';
+    const tage = fz.mfk?.naechste ? Math.floor((new Date(fz.mfk.naechste) - new Date()) / 86400000) : null;
+    const eintragungen = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
+
+    return `<div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:12px;border-top:4px solid ${mfkStatusColor(fz)}">
+
+      <!-- Header -->
+      <div style="padding:14px 18px;display:flex;align-items:center;gap:12px;background:#FAFAFA;border-bottom:1px solid #F0F0F0;flex-wrap:wrap">
+        <div style="background:${mfkStatusColor(fz)};color:white;padding:6px 16px;border-radius:8px;font-weight:800;font-size:15px;letter-spacing:.08em">${highlight(fz.kennzeichen, q)}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:15px">${highlight(fz.marke+' '+(fz.modell||''), q)} <span style="color:#888;font-weight:400">${fz.baujahr?'('+fz.baujahr+')':''}</span></div>
+          <div style="font-size:12px;color:#888">${fz.farbe?'🎨 '+fz.farbe:''} ${fz.vin?'· VIN: '+fz.vin:''}</div>
+        </div>
+        ${mfkStatusBadge(fz)}
+      </div>
+
+      <!-- Body -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+
+        <!-- Halter -->
+        <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
+          <div style="font-size:10px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px"><span style="background:#D6EAF8;padding:2px 8px;border-radius:4px">👤 Halter</span></div>
+          <div style="font-size:15px;font-weight:700;color:#1C1C1E;margin-bottom:5px">${highlight(halterName, q)}</div>
+          ${fz.halter?.tel?`<div style="font-size:13px;margin-bottom:3px">📞 <a href="tel:${fz.halter.tel}" style="color:#1A5276;font-weight:600;text-decoration:none">${highlight(fz.halter.tel, q)}</a></div>`:''}
+          ${fz.halter?.email?`<div style="font-size:12px;margin-bottom:3px">✉️ <a href="mailto:${fz.halter.email}" style="color:#1A5276;text-decoration:none">${highlight(fz.halter.email, q)}</a></div>`:''}
+          ${fz.halter?.adresse?`<div style="font-size:12px;color:#888">📍 ${highlight(fz.halter.adresse, q)}</div>`:''}
+        </div>
+
+        <!-- MFK -->
+        <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
+          <div style="font-size:10px;font-weight:700;color:#1E8449;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px"><span style="background:#D5F5E3;padding:2px 8px;border-radius:4px">🔧 MFK</span></div>
+          ${fz.mfk?.datum?`<div style="font-size:12px;color:#888;margin-bottom:3px">Letzte: <strong style="color:#1C1C1E">${fmtD(fz.mfk.datum)}</strong></div>`:''}
+          ${fz.mfk?.naechste?`<div style="font-size:12px;margin-bottom:5px">Nächste: <strong style="color:${mfkStatusColor(fz)}">${fmtD(fz.mfk.naechste)}${tage!==null?' ('+tage+' Tage)':''}</strong></div>`:''}
+          ${fz.gutachten?`<span style="background:#FFF8E1;color:#D4A017;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:700">📋 ${fz.gutachten}</span>`:''}
+        </div>
+
+        <!-- Eintragungen -->
+        <div style="padding:14px 18px">
+          <div style="font-size:10px;font-weight:700;color:#6C3483;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px"><span style="background:#E8DAEF;padding:2px 8px;border-radius:4px">📋 Eintragungen</span></div>
+          ${eintragungen.length
+            ?`<div style="display:flex;flex-wrap:wrap;gap:4px">${eintragungen.map(e=>`<span style="background:#F4F6F7;border:1px solid #DDE;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${e}</span>`).join('')}</div>`
+            :'<div style="font-size:12px;color:#AAA">Keine Eintragungen</div>'}
+        </div>
+
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ══ RENDER ALL ══
