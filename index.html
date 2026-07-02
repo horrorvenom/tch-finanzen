@@ -185,7 +185,7 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Kunde / Fahrzeug</label><input type="text" id="ein-kunde"></div>
         <div class="form-group"><label>Kategorie</label><select id="ein-kat"><option value="">— wählen —</option><option>Werkstatt</option><option>Abschleppdienst</option><option>Gutachten</option><option>Eintragung</option><option>MFK-Vorbereitung</option><option>Sonstiges</option></select></div>
         <div class="form-group"><label>Mitarbeiter</label><select id="ein-ma"><option value="">— wählen —</option></select></div>
-        <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="ein-betrag" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group" style="display:none"><label>Betrag (CHF)</label><input type="number" id="ein-betrag" placeholder="0.00" min="0" step="0.01"></div>
         <div class="form-group"><label>Bezahlt</label><select id="ein-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
       <div style="margin-bottom:14px">
@@ -229,9 +229,9 @@ tbody td{padding:8px 9px;}
             <span style="font-size:18px;font-weight:800;color:#1E8449"><span id="ein-total-gewaehlt">0.00</span> CHF</span>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--gray);margin-top:6px">💡 Mehrere Positionen anklicken — Beschreibung und Betrag werden automatisch summiert und in die Felder unten übernommen.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:6px">💡 Mehrere Positionen anklicken — die Endsumme oben wird automatisch übernommen und gespeichert.</div>
       </div>
-      <button class="btn btn-green" onclick="addEinnahme()">✚ Speichern</button>
+      <button class="btn btn-green" onclick="addEinnahme()" style="font-size:15px;padding:12px 24px">✚ Einnahme speichern (<span id="ein-btn-total">0.00</span> CHF)</button>
     </div>
     <div class="card">
       <div class="card-title">📋 Alle Einnahmen</div>
@@ -1200,24 +1200,60 @@ function buildEinPreisliste() {
   if (!container) return;
   const fzKat = document.getElementById('ein-fz-kategorie')?.value || 'preisLux';
 
-  let html = '';
+  container.innerHTML = '';
+  let itemIndex = 0;
+  const itemMap = {};
+
   Object.entries(ERSATZTEILE).forEach(([kat, items]) => {
-    html += `<div style="font-size:11px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #D6EAF8">${kat}</div>`;
-    items.forEach((item, idx) => {
+    const katDiv = document.createElement('div');
+    katDiv.style.cssText = 'font-size:11px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #D6EAF8';
+    katDiv.textContent = kat;
+    container.appendChild(katDiv);
+
+    items.forEach(item => {
       const preis = item[fzKat];
       const key = kat + '|' + item.name;
-      const isChecked = einSelectedItems[key] ? 'checked' : '';
-      html += `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:3px;background:${einSelectedItems[key]?'#D5F5E3':'white'};border:1px solid ${einSelectedItems[key]?'#1E8449':'#EEE'}" onclick="toggleEinItem(event,'${key.replace(/'/g,"\\'")}','${item.name.replace(/'/g,"\\'")}',${preis})">
-        <input type="checkbox" ${isChecked} style="width:16px;height:16px;accent-color:#1E8449;pointer-events:none">
-        <span style="flex:1">${item.name}</span>
-        <span style="font-weight:700;color:#1E8449">${preis.toLocaleString('de-CH')} CHF</span>
-      </label>`;
+      itemMap[itemIndex] = {key, name: item.name, preis};
+      const isSelected = !!einSelectedItems[key];
+
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:3px;background:' + (isSelected?'#D5F5E3':'white') + ';border:1px solid ' + (isSelected?'#1E8449':'#EEE');
+      label.dataset.idx = itemIndex;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = isSelected;
+      checkbox.style.cssText = 'width:16px;height:16px;accent-color:#1E8449';
+      checkbox.addEventListener('change', () => toggleEinItemByIdx(itemMap[label.dataset.idx]));
+
+      const nameSpan = document.createElement('span');
+      nameSpan.style.flex = '1';
+      nameSpan.textContent = item.name;
+
+      const priceSpan = document.createElement('span');
+      priceSpan.style.cssText = 'font-weight:700;color:#1E8449';
+      priceSpan.textContent = preis.toLocaleString('de-CH') + ' CHF';
+
+      label.appendChild(checkbox);
+      label.appendChild(nameSpan);
+      label.appendChild(priceSpan);
+
+      // Click on label (not just checkbox) also toggles
+      label.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+          checkbox.checked = !checkbox.checked;
+          toggleEinItemByIdx(itemMap[label.dataset.idx]);
+        }
+      });
+
+      container.appendChild(label);
+      itemIndex++;
     });
   });
-  container.innerHTML = html;
 }
 
-function toggleEinItem(evt, key, name, preis) {
+function toggleEinItemByIdx(itemData) {
+  const {key, name, preis} = itemData;
   if (einSelectedItems[key]) {
     delete einSelectedItems[key];
   } else {
@@ -1266,7 +1302,13 @@ function updateEinSelectionSummary() {
     document.getElementById('ein-desc').value = desc;
     document.getElementById('ein-betrag').value = total.toFixed(2);
     document.getElementById('ein-kat').value = 'Werkstatt';
+  } else {
+    document.getElementById('ein-betrag').value = '';
   }
+
+  // Update save button total display
+  const btnTotalEl = document.getElementById('ein-btn-total');
+  if (btnTotalEl) btnTotalEl.textContent = total.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
 async function addAusgabeAndDeductKonto(row) {
