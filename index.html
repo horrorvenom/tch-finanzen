@@ -191,15 +191,18 @@ tbody td{padding:8px 9px;}
       <div style="margin-bottom:14px">
         <input type="hidden" id="ein-fz-kategorie" value="preisLux">
         <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🚗 Fahrzeugklasse</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #D4A017;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FFF8E1;color:#8a6d00">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <label style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #D4A017;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FFF8E1;color:#8a6d00">
             <input type="radio" name="ein-fz-kat-radio" value="preisLux" checked onchange="setEinFzKat(this.value)" style="accent-color:#D4A017"> 🏆 Luxus
           </label>
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #17A2D4;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E7F6FC;color:#0a5a70">
+          <label style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #17A2D4;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E7F6FC;color:#0a5a70">
             <input type="radio" name="ein-fz-kat-radio" value="preisSport" onchange="setEinFzKat(this.value)" style="accent-color:#17A2D4"> 🏎️ Sport
           </label>
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #1E8449;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E9F7EF;color:#0f5c30">
+          <label style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #1E8449;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E9F7EF;color:#0f5c30">
             <input type="radio" name="ein-fz-kat-radio" value="preisStd" onchange="setEinFzKat(this.value)" style="accent-color:#1E8449"> 🚙 Standard
+          </label>
+          <label style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #C0392B;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FADBD8;color:#7a2419">
+            <input type="radio" name="ein-fz-kat-radio" value="abschlepp" onchange="setEinFzKat(this.value)" style="accent-color:#C0392B"> 🚛 Abschleppdienst
           </label>
         </div>
         <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">🛠️ Dienstleistungen auswählen (Mehrfachauswahl möglich)</div>
@@ -1153,21 +1156,24 @@ async function analyzeAll(){
 
 
 // ══ ERSATZTEILE PREISLISTE ══
-const ERSATZTEILE = {
+const ABSCHLEPPDIENST = {
   "Abschleppen": [
-    {name:"Abschleppen PKW (ab Firmengelände)", preisLux:600, preisSport:600, preisStd:600},
-    {name:"Abschleppen Motorrad (ab Firmengelände)", preisLux:500, preisSport:500, preisStd:500},
-    {name:"Fahrzeugtransport", preisLux:100, preisSport:100, preisStd:100, einheit:"km"},
-    {name:"Fahrzeugbergung nach Unfall (je nach Aufwand)", preisLux:800, preisSport:800, preisStd:800},
+    {name:"Abschleppen PKW (ab Firmengelände)", preis:600},
+    {name:"Abschleppen Motorrad (ab Firmengelände)", preis:500},
+    {name:"Fahrzeugtransport", preis:100, einheit:"km"},
+    {name:"Fahrzeugbergung nach Unfall (je nach Aufwand)", preis:800},
   ],
   "Pannenhilfe vor Ort": [
-    {name:"Pannenhilfe vor Ort (Allgemeine Pannenhilfe & Soforthilfe)", preisLux:500, preisSport:500, preisStd:500},
-    {name:"Starthilfe (Batterie überbrücken)", preisLux:100, preisSport:100, preisStd:100},
-    {name:"Reifenwechsel (vor Ort)", preisLux:500, preisSport:500, preisStd:500, einheit:"Rad"},
+    {name:"Pannenhilfe vor Ort (Allgemeine Pannenhilfe & Soforthilfe)", preis:500},
+    {name:"Starthilfe (Batterie überbrücken)", preis:100},
+    {name:"Reifenwechsel (vor Ort)", preis:500, einheit:"Rad"},
   ],
   "Notdienst-Aufschlag": [
-    {name:"Nachts & Wochenende Aufschlag (22:00–06:00 & Sa/So)", preisLux:50, preisSport:50, preisStd:50},
+    {name:"Nachts & Wochenende Aufschlag (22:00–06:00 & Sa/So)", preis:50},
   ],
+};
+
+const ERSATZTEILE = {
   "Service Materialien": [
     {name:"Motoröl", preisLux:250, preisSport:200, preisStd:150, einheit:"Liter"},
     {name:"Kupplung (Kit inkl. Druckplatte & Lager)", preisLux:1900, preisSport:1350, preisStd:850},
@@ -1213,19 +1219,21 @@ function buildEinPreisliste() {
   const container = document.getElementById('ein-preisliste');
   if (!container) return;
   const fzKat = document.getElementById('ein-fz-kategorie')?.value || 'preisLux';
+  const isAbschlepp = fzKat === 'abschlepp';
+  const datenquelle = isAbschlepp ? ABSCHLEPPDIENST : ERSATZTEILE;
 
   container.innerHTML = '';
   let itemIndex = 0;
   const itemMap = {};
 
-  Object.entries(ERSATZTEILE).forEach(([kat, items]) => {
+  Object.entries(datenquelle).forEach(([kat, items]) => {
     const katDiv = document.createElement('div');
     katDiv.style.cssText = 'font-size:11px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #D6EAF8';
     katDiv.textContent = kat;
     container.appendChild(katDiv);
 
     items.forEach(item => {
-      const preisEinzel = item[fzKat];
+      const preisEinzel = isAbschlepp ? item.preis : item[fzKat];
       const key = kat + '|' + item.name;
       const hatMenge = !!item.einheit;
       const bestehendeMenge = einSelectedItems[key]?.menge || 1;
@@ -1290,7 +1298,6 @@ function buildEinPreisliste() {
     });
   });
 }
-
 function toggleEinItemByIdx(itemData) {
   const {key, name, preisEinzel, einheit} = itemData;
   if (einSelectedItems[key]) {
