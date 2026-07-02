@@ -1154,14 +1154,28 @@ async function analyzeAll(){
 
 // ══ ERSATZTEILE PREISLISTE ══
 const ERSATZTEILE = {
+  "Abschleppen": [
+    {name:"Abschleppen PKW (ab Firmengelände)", preisLux:600, preisSport:600, preisStd:600},
+    {name:"Abschleppen Motorrad (ab Firmengelände)", preisLux:500, preisSport:500, preisStd:500},
+    {name:"Fahrzeugtransport", preisLux:100, preisSport:100, preisStd:100, einheit:"km"},
+    {name:"Fahrzeugbergung nach Unfall (je nach Aufwand)", preisLux:800, preisSport:800, preisStd:800},
+  ],
+  "Pannenhilfe vor Ort": [
+    {name:"Pannenhilfe vor Ort (Allgemeine Pannenhilfe & Soforthilfe)", preisLux:500, preisSport:500, preisStd:500},
+    {name:"Starthilfe (Batterie überbrücken)", preisLux:100, preisSport:100, preisStd:100},
+    {name:"Reifenwechsel (vor Ort)", preisLux:500, preisSport:500, preisStd:500, einheit:"Rad"},
+  ],
+  "Notdienst-Aufschlag": [
+    {name:"Nachts & Wochenende Aufschlag (22:00–06:00 & Sa/So)", preisLux:50, preisSport:50, preisStd:50},
+  ],
   "Service Materialien": [
-    {name:"Motoröl (pro Liter)", preisLux:250, preisSport:200, preisStd:150},
+    {name:"Motoröl", preisLux:250, preisSport:200, preisStd:150, einheit:"Liter"},
     {name:"Kupplung (Kit inkl. Druckplatte & Lager)", preisLux:1900, preisSport:1350, preisStd:850},
     {name:"Luftfilter (Hochleistungsfilter)", preisLux:220, preisSport:150, preisStd:65},
-    {name:"Zündkerzen (pro Stück)", preisLux:150, preisSport:100, preisStd:50},
-    {name:"Bremsbeläge (pro Achse, Teile & Einbau)", preisLux:620, preisSport:450, preisStd:250},
-    {name:"Reifen (pro Stück)", preisLux:520, preisSport:350, preisStd:160},
-    {name:"Federung (pro Achse, Teile & Einbau)", preisLux:1200, preisSport:900, preisStd:520},
+    {name:"Zündkerzen", preisLux:150, preisSport:100, preisStd:50, einheit:"Stück"},
+    {name:"Bremsbeläge (Teile & Einbau)", preisLux:620, preisSport:450, preisStd:250, einheit:"Achse"},
+    {name:"Reifen", preisLux:520, preisSport:350, preisStd:160, einheit:"Stück"},
+    {name:"Federung (Teile & Einbau)", preisLux:1200, preisSport:900, preisStd:520, einheit:"Achse"},
   ],
   "Fahrzeugkontrolle & MFK": [
     {name:"Motorkontrolle / Diagnose (inkl. Fehlerspeicher)", preisLux:190, preisSport:160, preisStd:120},
@@ -1211,53 +1225,79 @@ function buildEinPreisliste() {
     container.appendChild(katDiv);
 
     items.forEach(item => {
-      const preis = item[fzKat];
+      const preisEinzel = item[fzKat];
       const key = kat + '|' + item.name;
-      itemMap[itemIndex] = {key, name: item.name, preis};
+      const hatMenge = !!item.einheit;
+      const bestehendeMenge = einSelectedItems[key]?.menge || 1;
+      itemMap[itemIndex] = {key, name: item.name, preisEinzel, einheit: item.einheit};
       const isSelected = !!einSelectedItems[key];
 
-      const label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:3px;background:' + (isSelected?'#D5F5E3':'white') + ';border:1px solid ' + (isSelected?'#1E8449':'#EEE');
-      label.dataset.idx = itemIndex;
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:3px;background:' + (isSelected?'#D5F5E3':'white') + ';border:1px solid ' + (isSelected?'#1E8449':'#EEE');
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = isSelected;
-      checkbox.style.cssText = 'width:16px;height:16px;accent-color:#1E8449';
-      checkbox.addEventListener('change', () => toggleEinItemByIdx(itemMap[label.dataset.idx]));
+      checkbox.style.cssText = 'width:16px;height:16px;accent-color:#1E8449;cursor:pointer;flex-shrink:0';
+      checkbox.addEventListener('change', () => toggleEinItemByIdx(itemMap[wrapper.dataset.idx]));
+      wrapper.dataset.idx = itemIndex;
 
       const nameSpan = document.createElement('span');
-      nameSpan.style.flex = '1';
-      nameSpan.textContent = item.name;
+      nameSpan.style.cssText = 'flex:1;cursor:pointer';
+      nameSpan.textContent = item.name + (hatMenge ? ' (pro ' + item.einheit + ')' : '');
+      nameSpan.addEventListener('click', () => { checkbox.checked = !checkbox.checked; toggleEinItemByIdx(itemMap[wrapper.dataset.idx]); });
+
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(nameSpan);
+
+      // Mengenfeld nur wenn ausgewählt UND hatMenge
+      if (hatMenge && isSelected) {
+        const mengeWrap = document.createElement('div');
+        mengeWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0';
+
+        const mengeLabel = document.createElement('span');
+        mengeLabel.style.cssText = 'font-size:10px;color:#1E8449;font-weight:600';
+        mengeLabel.textContent = 'Anzahl:';
+
+        const mengeInput = document.createElement('input');
+        mengeInput.type = 'number';
+        mengeInput.min = '1';
+        mengeInput.step = '1';
+        mengeInput.value = bestehendeMenge;
+        mengeInput.style.cssText = 'width:50px;border:1.5px solid #1E8449;border-radius:5px;padding:3px 6px;font-size:12px;text-align:center;font-weight:700;outline:none';
+        mengeInput.addEventListener('click', (e) => e.stopPropagation());
+        mengeInput.addEventListener('change', (e) => {
+          const menge = Math.max(1, parseInt(e.target.value) || 1);
+          e.target.value = menge;
+          einSelectedItems[key].menge = menge;
+          einSelectedItems[key].preis = preisEinzel * menge;
+          updateEinSelectionSummary();
+        });
+
+        mengeWrap.appendChild(mengeLabel);
+        mengeWrap.appendChild(mengeInput);
+        wrapper.appendChild(mengeWrap);
+      }
 
       const priceSpan = document.createElement('span');
-      priceSpan.style.cssText = 'font-weight:700;color:#1E8449';
-      priceSpan.textContent = preis.toLocaleString('de-CH') + ' CHF';
+      priceSpan.style.cssText = 'font-weight:700;color:#1E8449;min-width:80px;text-align:right;flex-shrink:0';
+      const angezeigterPreis = isSelected && hatMenge ? preisEinzel * bestehendeMenge : preisEinzel;
+      priceSpan.textContent = angezeigterPreis.toLocaleString('de-CH') + ' CHF';
+      wrapper.appendChild(priceSpan);
 
-      label.appendChild(checkbox);
-      label.appendChild(nameSpan);
-      label.appendChild(priceSpan);
-
-      // Click on label (not just checkbox) also toggles
-      label.addEventListener('click', (e) => {
-        if (e.target !== checkbox) {
-          checkbox.checked = !checkbox.checked;
-          toggleEinItemByIdx(itemMap[label.dataset.idx]);
-        }
-      });
-
-      container.appendChild(label);
+      container.appendChild(wrapper);
       itemIndex++;
     });
   });
 }
 
 function toggleEinItemByIdx(itemData) {
-  const {key, name, preis} = itemData;
+  const {key, name, preisEinzel, einheit} = itemData;
   if (einSelectedItems[key]) {
     delete einSelectedItems[key];
   } else {
-    einSelectedItems[key] = {name, preis};
+    const menge = 1;
+    einSelectedItems[key] = {name, preis: preisEinzel * menge, preisEinzel, menge, einheit};
   }
   buildEinPreisliste();
   updateEinSelectionSummary();
@@ -1297,7 +1337,10 @@ function updateEinSelectionSummary() {
 
   // Auto-fill beschreibung and betrag
   if (count > 0) {
-    let desc = items.map(i => i.name).join(' + ');
+    let desc = items.map(i => {
+      if (i.menge && i.menge > 1) return i.menge + 'x ' + i.name;
+      return i.name;
+    }).join(' + ');
     if (rabattProzent > 0) desc += ' (−' + rabattProzent + '%)';
     document.getElementById('ein-desc').value = desc;
     document.getElementById('ein-betrag').value = total.toFixed(2);
