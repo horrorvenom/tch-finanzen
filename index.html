@@ -188,6 +188,28 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Betrag (CHF)</label><input type="number" id="ein-betrag" placeholder="0.00" min="0" step="0.01"></div>
         <div class="form-group"><label>Bezahlt</label><select id="ein-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
+      <div style="margin-bottom:14px">
+        <input type="hidden" id="ein-fz-kategorie" value="preisLux">
+        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🚗 Fahrzeugklasse</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #D4A017;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FFF8E1;color:#8a6d00">
+            <input type="radio" name="ein-fz-kat-radio" value="preisLux" checked onchange="setEinFzKat(this.value)" style="accent-color:#D4A017"> 🏆 Luxus
+          </label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #17A2D4;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E7F6FC;color:#0a5a70">
+            <input type="radio" name="ein-fz-kat-radio" value="preisSport" onchange="setEinFzKat(this.value)" style="accent-color:#17A2D4"> 🏎️ Sport
+          </label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #1E8449;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E9F7EF;color:#0f5c30">
+            <input type="radio" name="ein-fz-kat-radio" value="preisStd" onchange="setEinFzKat(this.value)" style="accent-color:#1E8449"> 🚙 Standard
+          </label>
+        </div>
+        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">🛠️ Dienstleistungen auswählen (Mehrfachauswahl möglich)</div>
+        <div id="ein-preisliste" style="max-height:280px;overflow-y:auto;border:1.5px solid #DDE;border-radius:8px;padding:10px;background:#FAFAFA"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 14px;background:#D5F5E3;border-radius:8px">
+          <span style="font-size:12px;font-weight:600;color:#1E8449">Ausgewählt: <span id="ein-anzahl-gewaehlt">0</span> Position(en)</span>
+          <span style="font-size:16px;font-weight:800;color:#1E8449">Total: <span id="ein-total-gewaehlt">0.00</span> CHF</span>
+        </div>
+        <div style="font-size:11px;color:var(--gray);margin-top:6px">💡 Mehrere Positionen anklicken — Beschreibung und Betrag werden automatisch summiert und in die Felder unten übernommen.</div>
+      </div>
       <button class="btn btn-green" onclick="addEinnahme()">✚ Speichern</button>
     </div>
     <div class="card">
@@ -215,25 +237,7 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Bezahlt</label><select id="aus-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
       <div style="margin-bottom:12px">
-        <input type="hidden" id="aus-fz-kategorie" value="preisLux">
-        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🚗 Fahrzeugklasse</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #D4A017;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FFF8E1;color:#8a6d00">
-            <input type="radio" name="fz-kategorie" value="preisLux" checked onchange="setFzKat(this.value)" style="accent-color:#D4A017"> 🏆 Luxus
-          </label>
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #17A2D4;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E7F6FC;color:#0a5a70">
-            <input type="radio" name="fz-kategorie" value="preisSport" onchange="setFzKat(this.value)" style="accent-color:#17A2D4"> 🏎️ Sport
-          </label>
-          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #1E8449;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E9F7EF;color:#0f5c30">
-            <input type="radio" name="fz-kategorie" value="preisStd" onchange="setFzKat(this.value)" style="accent-color:#1E8449"> 🚙 Standard
-          </label>
-        </div>
-        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Schnellauswahl Ersatzteil / Dienstleistung</div>
-        <select id="aus-ersatzteil" onchange="onErsatzteilChange()" style="width:100%;border:1.5px solid #D4A017;border-radius:7px;padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;background:#FFF8E1;color:#1C1C1E">
-          <option value="">— Ersatzteil wählen (füllt Felder automatisch aus) —</option>
-        </select>
-        <div style="font-size:11px;color:var(--gray);margin-top:4px">💡 Erst Fahrzeugklasse wählen, dann Ersatzteil — Preis wird automatisch angepasst. Bei Bezahlt=Ja wird der Betrag vom Firmenkonto abgezogen.</div>
-      </div>
+  
       <button class="btn btn-red" onclick="addAusgabe()">✚ Speichern</button>
     </div>
     <div class="card">
@@ -924,6 +928,9 @@ async function addEinnahme(){
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
   await dbIns('einnahmen',r);
   ['ein-desc','ein-kunde','ein-betrag'].forEach(id=>document.getElementById(id).value='');
+  einSelectedItems = {};
+  buildEinPreisliste();
+  updateEinSelectionSummary();
   renderAll();
 }
 async function togEin(id){const e=(await dbGet('einnahmen')).find(x=>x.id===id);if(e)await dbUpd('einnahmen',id,{bezahlt:e.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
@@ -1155,49 +1162,61 @@ const ERSATZTEILE = {
 };
 
 
-function setFzKat(val) {
-  document.getElementById('aus-fz-kategorie').value = val;
-  buildErsatzteileDropdown();
+let einSelectedItems = {}; // key: itemName, value: {name, preis, qty}
+
+function setEinFzKat(val) {
+  document.getElementById('ein-fz-kategorie').value = val;
+  einSelectedItems = {}; // Reset selection when category changes
+  buildEinPreisliste();
 }
 
-function buildErsatzteileDropdown() {
-  const sel = document.getElementById('aus-ersatzteil');
-  if (!sel) return;
-  const fzKat = document.getElementById('aus-fz-kategorie')?.value || 'preisStd';
-  sel.innerHTML = '<option value="">— Ersatzteil wählen (optional) —</option>';
+function buildEinPreisliste() {
+  const container = document.getElementById('ein-preisliste');
+  if (!container) return;
+  const fzKat = document.getElementById('ein-fz-kategorie')?.value || 'preisLux';
+
+  let html = '';
   Object.entries(ERSATZTEILE).forEach(([kat, items]) => {
-    const og = document.createElement('optgroup');
-    og.label = kat;
-    items.forEach(item => {
+    html += `<div style="font-size:11px;font-weight:700;color:#1A5276;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #D6EAF8">${kat}</div>`;
+    items.forEach((item, idx) => {
       const preis = item[fzKat];
-      const o = document.createElement('option');
-      o.value = JSON.stringify({name: item.name, preis: preis});
-      o.textContent = item.name + ' — ' + preis.toLocaleString('de-CH') + ' CHF';
-      og.appendChild(o);
+      const key = kat + '|' + item.name;
+      const isChecked = einSelectedItems[key] ? 'checked' : '';
+      html += `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:3px;background:${einSelectedItems[key]?'#D5F5E3':'white'};border:1px solid ${einSelectedItems[key]?'#1E8449':'#EEE'}" onclick="toggleEinItem(event,'${key.replace(/'/g,"\\'")}','${item.name.replace(/'/g,"\\'")}',${preis})">
+        <input type="checkbox" ${isChecked} style="width:16px;height:16px;accent-color:#1E8449;pointer-events:none">
+        <span style="flex:1">${item.name}</span>
+        <span style="font-weight:700;color:#1E8449">${preis.toLocaleString('de-CH')} CHF</span>
+      </label>`;
     });
-    sel.appendChild(og);
   });
+  container.innerHTML = html;
 }
 
-function onErsatzteilChange() {
-  const sel = document.getElementById('aus-ersatzteil');
-  const val = sel.value;
-  if (!val) return;
-  const item = JSON.parse(val);
-  document.getElementById('aus-desc').value = item.name;
-  document.getElementById('aus-einzelpreis').value = item.preis;
-  document.getElementById('aus-kat').value = 'Ersatzteile';
-  berechneAusBetrag();
+function toggleEinItem(evt, key, name, preis) {
+  if (einSelectedItems[key]) {
+    delete einSelectedItems[key];
+  } else {
+    einSelectedItems[key] = {name, preis};
+  }
+  buildEinPreisliste();
+  updateEinSelectionSummary();
 }
 
-function berechneAusBetrag() {
-  const menge = parseFloat(document.getElementById('aus-menge')?.value) || 1;
-  const einzelpreis = parseFloat(document.getElementById('aus-einzelpreis')?.value) || 0;
-  const total = menge * einzelpreis;
-  const betragEl = document.getElementById('aus-betrag');
-  if (betragEl) {
-    betragEl.value = total.toFixed(2);
-    betragEl.style.borderColor = total > 0 ? '#1E8449' : '#DDE';
+function updateEinSelectionSummary() {
+  const items = Object.values(einSelectedItems);
+  const total = items.reduce((s,i) => s + i.preis, 0);
+  const count = items.length;
+
+  const anzahlEl = document.getElementById('ein-anzahl-gewaehlt');
+  const totalEl = document.getElementById('ein-total-gewaehlt');
+  if (anzahlEl) anzahlEl.textContent = count;
+  if (totalEl) totalEl.textContent = total.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  // Auto-fill beschreibung and betrag
+  if (count > 0) {
+    document.getElementById('ein-desc').value = items.map(i => i.name).join(' + ');
+    document.getElementById('ein-betrag').value = total.toFixed(2);
+    document.getElementById('ein-kat').value = 'Werkstatt';
   }
 }
 
