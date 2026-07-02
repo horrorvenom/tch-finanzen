@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TCH App v20260613130002 -->
+<!-- TCH App v20260613091118 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -215,11 +215,24 @@ tbody td{padding:8px 9px;}
         <div class="form-group"><label>Bezahlt</label><select id="aus-bez"><option value="Nein">Nein</option><option value="Ja">Ja</option></select></div>
       </div>
       <div style="margin-bottom:12px">
+        <input type="hidden" id="aus-fz-kategorie" value="preisLux">
+        <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🚗 Fahrzeugklasse</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #D4A017;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#FFF8E1;color:#8a6d00">
+            <input type="radio" name="fz-kategorie" value="preisLux" checked onchange="setFzKat(this.value)" style="accent-color:#D4A017"> 🏆 Luxus
+          </label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #17A2D4;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E7F6FC;color:#0a5a70">
+            <input type="radio" name="fz-kategorie" value="preisSport" onchange="setFzKat(this.value)" style="accent-color:#17A2D4"> 🏎️ Sport
+          </label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:2px solid #1E8449;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;background:#E9F7EF;color:#0f5c30">
+            <input type="radio" name="fz-kategorie" value="preisStd" onchange="setFzKat(this.value)" style="accent-color:#1E8449"> 🚙 Standard
+          </label>
+        </div>
         <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Schnellauswahl Ersatzteil / Dienstleistung</div>
         <select id="aus-ersatzteil" onchange="onErsatzteilChange()" style="width:100%;border:1.5px solid #D4A017;border-radius:7px;padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;background:#FFF8E1;color:#1C1C1E">
           <option value="">— Ersatzteil wählen (füllt Felder automatisch aus) —</option>
         </select>
-        <div style="font-size:11px;color:var(--gray);margin-top:4px">💡 Wähle ein Ersatzteil — Beschreibung, Preis und Kategorie werden automatisch ausgefüllt. Bei Bezahlt=Ja wird der Betrag vom Firmenkonto abgezogen.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">💡 Erst Fahrzeugklasse wählen, dann Ersatzteil — Preis wird automatisch angepasst. Bei Bezahlt=Ja wird der Betrag vom Firmenkonto abgezogen.</div>
       </div>
       <button class="btn btn-red" onclick="addAusgabe()">✚ Speichern</button>
     </div>
@@ -660,16 +673,6 @@ async function doLogin() {
 
   const s=sb();
   if(s){
-    // Check banned list before login
-    if(email!==CEO_EMAIL){
-      const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
-      if(bannedData?.value){
-        try{
-          const bannedList=JSON.parse(bannedData.value);
-          if(bannedList.includes(email)){err.textContent='❌ Dieser Account wurde gesperrt. Bitte den CEO kontaktieren.';return;}
-        }catch(e){}
-      }
-    }
     const {data,error}=await s.auth.signInWithPassword({email,password:pass});
     if(error){err.textContent='❌ '+error.message;return;}
     const {data:prof}=await s.from('profiles').select('*').eq('id',data.user.id).single();
@@ -735,23 +738,6 @@ async function doRegister() {
 function doLogout(){CU=null;sb()?.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
 async function startApp(){
-  // Prüfe ob aktiver User gebannt wurde (z.B. während laufender Session)
-  if(CU&&CU.email&&CU.email!==CEO_EMAIL){
-    const s=sb();
-    if(s){
-      const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
-      if(bannedData?.value){
-        try{
-          const bannedList=JSON.parse(bannedData.value);
-          if(bannedList.includes(CU.email)){
-            doLogout();
-            alert('⛔ Dein Account wurde gesperrt. Bitte den CEO kontaktieren.');
-            return;
-          }
-        }catch(e){}
-      }
-    }
-  }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const b=document.getElementById('nav-badge');
@@ -841,25 +827,9 @@ async function addMitarbeiter(){
   const lohn=parseFloat(document.getElementById('ma-lohn').value)||0;
   const prov=parseFloat(document.getElementById('ma-prov').value)||0;
   if(!name||!rang){alert('Name und Rang sind Pflicht.');return;}
-  const perms=['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter']
-    .filter(p=>document.getElementById('perm-'+p)?.checked);
+  const perms = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter']
+    .filter(p => document.getElementById('perm-'+p)?.checked);
   await dbIns('mitarbeiter',{name,email,rang,lohn,provision:prov,permissions:JSON.stringify(perms)});
-  // E-Mail aus Ban-Liste entfernen falls vorhanden
-  if(email){
-    const s=sb();
-    if(s){
-      try{
-        const {data:bannedData}=await s.from('settings').select('value').eq('key','banned_emails').maybeSingle();
-        if(bannedData?.value){
-          let bannedList=JSON.parse(bannedData.value);
-          if(bannedList.includes(email)){
-            bannedList=bannedList.filter(e=>e!==email);
-            await s.from('settings').upsert({key:'banned_emails',value:JSON.stringify(bannedList),notiz:'Entsperrt beim Neuanlegen'});
-          }
-        }
-      }catch(e){}
-    }
-  }
   ['ma-name','ma-email','ma-lohn','ma-prov'].forEach(id=>document.getElementById(id).value='');
   // Reset permissions to default
   ['einnahmen','mfk','halter'].forEach(p=>{const el=document.getElementById('perm-'+p);if(el)el.checked=true;});
@@ -874,19 +844,12 @@ async function delMA(id){
   const m=mas.find(x=>x.id===id);
   // Delete from mitarbeiter table
   await dbDel('mitarbeiter',id);
+  // Delete from profiles table (blocks login check)
   const s=sb();
   if(s&&m?.email){
-    // 1. Delete from profiles table (blocks whitelist login check)
     await s.from('profiles').delete().eq('email',m.email);
-    // 2. Add email to banned list in settings (blocks active sessions)
-    const {data:banned}=await s.from('settings').select('*').eq('key','banned_emails').maybeSingle();
-    let bannedList=[];
-    if(banned?.value){try{bannedList=JSON.parse(banned.value);}catch(e){bannedList=[];}}
-    if(!bannedList.includes(m.email))bannedList.push(m.email);
-    await s.from('settings').upsert({key:'banned_emails',value:JSON.stringify(bannedList),notiz:'Auto-gebannt beim Löschen'});
   }
   renderAll();
-  alert('✅ Mitarbeiter gelöscht. Login-Zugang wurde gesperrt.');
 }
 async function updProv(id,v){await dbUpd('mitarbeiter',id,{provision:parseFloat(v)||0});renderAll();}
 async function updLohn(id,v){if(!isCEO())return;await dbUpd('mitarbeiter',id,{lohn:parseFloat(v)||0});renderAll();}
@@ -1159,64 +1122,57 @@ async function analyzeAll(){
 
 // ══ ERSATZTEILE PREISLISTE ══
 const ERSATZTEILE = {
-  "Motor & Antrieb": [
-    {name:"Zündkerzen (inkl. Montage)", preis:30, einheit:"pro Stück"},
-    {name:"Motoröl", preis:100, einheit:"pro Liter"},
-    {name:"Luftfilter", preis:300, einheit:"typisch"},
-    {name:"Kraftstofffilter", preis:300, einheit:"pro Fahrzeug"},
-    {name:"Teilreparatur (Dichtungen, kleinere Teile)", preis:2000, einheit:"pauschal"},
-    {name:"Kupplung wechseln (Kit)", preis:1100, einheit:"pauschal"},
-    {name:"Motorüberholung / Revision", preis:2500, einheit:"pauschal"},
-    {name:"Austauschmotor (inkl. Einbau)", preis:5000, einheit:"pauschal"},
-    {name:"Getriebeöl", preis:100, einheit:"pro Liter"},
-  ],
-  "Bremsen & Fahrwerk": [
-    {name:"Bremsscheiben + Beläge", preis:1200, einheit:"pro Achse"},
-    {name:"Bremssattel Service", preis:800, einheit:"pauschal"},
-    {name:"Federn", preis:1000, einheit:"pro Achse"},
-    {name:"Stossdämpfer", preis:1000, einheit:"pro Achse"},
-    {name:"Rad / Reifen-Montage", preis:800, einheit:"pro Rad"},
-  ],
-  "Karosserie & Scheiben": [
-    {name:"Kratzer / leichte Beulen", preis:2000, einheit:"ca."},
-    {name:"Stossstange reparieren / lackieren", preis:2000, einheit:"pauschal"},
-    {name:"Heckschaden", preis:2000, einheit:"pauschal"},
-    {name:"Karosserie-Reparatur (Front/Seite)", preis:1000, einheit:"pauschal"},
-    {name:"Autotür", preis:1200, einheit:"pro Stück"},
-    {name:"Frontscheibe", preis:900, einheit:"pauschal"},
-    {name:"Seitenscheibe", preis:450, einheit:"pro Stück"},
+  "Service Materialien": [
+    {name:"Motoröl (pro Liter)", preisLux:250, preisSport:200, preisStd:150},
+    {name:"Kupplung (Kit inkl. Druckplatte & Lager)", preisLux:1900, preisSport:1350, preisStd:850},
+    {name:"Luftfilter (Hochleistungsfilter)", preisLux:220, preisSport:150, preisStd:65},
+    {name:"Zündkerzen (pro Stück)", preisLux:150, preisSport:100, preisStd:50},
+    {name:"Bremsbeläge (pro Achse, Teile & Einbau)", preisLux:620, preisSport:450, preisStd:250},
+    {name:"Reifen (pro Stück)", preisLux:520, preisSport:350, preisStd:160},
+    {name:"Federung (pro Achse, Teile & Einbau)", preisLux:1200, preisSport:900, preisStd:520},
   ],
   "Fahrzeugkontrolle & MFK": [
-    {name:"Motorkontrolle / Diagnose", preis:120, einheit:"pauschal"},
-    {name:"Vollständige Fahrzeugkontrolle", preis:250, einheit:"pauschal"},
-    {name:"MFK-Vorbereitung", preis:350, einheit:"ca."},
-    {name:"MFK-Begleitung", preis:150, einheit:"pauschal"},
-    {name:"Abgasmessung / OBD-Check", preis:80, einheit:"pauschal"},
+    {name:"Motorkontrolle / Diagnose (inkl. Fehlerspeicher)", preisLux:190, preisSport:160, preisStd:120},
+    {name:"Vollständige Fahrzeugkontrolle", preisLux:390, preisSport:310, preisStd:240},
+    {name:"MFK-Vorbereitung", preisLux:580, preisSport:470, preisStd:320},
+    {name:"MFK-Begleitung", preisLux:240, preisSport:200, preisStd:150},
+    {name:"Abgasmessung / OBD-Check", preisLux:140, preisSport:120, preisStd:85},
   ],
   "Teilegutachten": [
-    {name:"Einzeleintragung", preis:450, einheit:"ca."},
-    {name:"Teilegutachten Standard", preis:525, einheit:"ca."},
-    {name:"Teilegutachten Komplex", preis:900, einheit:"ca."},
+    {name:"Einzeleintragung", preisLux:720, preisSport:580, preisStd:420},
+    {name:"Teilegutachten Standard (Felgen, Fahrwerk, Spoiler)", preisLux:850, preisSport:680, preisStd:520},
+    {name:"Teilegutachten Komplex (Motorumbau, Bremsanlage, Antrieb)", preisLux:1600, preisSport:1250, preisStd:900},
   ],
   "DTC Gutachten": [
-    {name:"DTC Gutachten Standard-Komplettumbau", preis:2250, einheit:"ca."},
-    {name:"DTC Gutachten massiver Umbau", preis:4500, einheit:"ca."},
-    {name:"DTC Gutachten Sonderanfertigung", preis:6000, einheit:"ab"},
-    {name:"Nachprüfung / Abnahme nach Umbau", preis:500, einheit:"pauschal"},
+    {name:"DTC Standard-Komplettumbau (Bodykit, Breitbau, Karosserie)", preisLux:3800, preisSport:2900, preisStd:2200},
+    {name:"DTC massiver Umbau (Kompletter Fahrzeugumbau)", preisLux:7500, preisSport:5800, preisStd:4200},
+    {name:"DTC Sonderanfertigung (Unikat-Umbau, Einzelfertigung)", preisLux:10500, preisSport:8500, preisStd:7000},
+    {name:"Nachprüfung / Abnahme (beim Strassenverkehrsamt)", preisLux:720, preisSport:640, preisStd:520},
+  ],
+  "Verkehrsamt": [
+    {name:"Führerschein ausstellen (inkl. Bearbeitung & Ausstellung)", preisLux:2500, preisSport:2500, preisStd:2500},
   ],
 };
+
+
+function setFzKat(val) {
+  document.getElementById('aus-fz-kategorie').value = val;
+  buildErsatzteileDropdown();
+}
 
 function buildErsatzteileDropdown() {
   const sel = document.getElementById('aus-ersatzteil');
   if (!sel) return;
+  const fzKat = document.getElementById('aus-fz-kategorie')?.value || 'preisStd';
   sel.innerHTML = '<option value="">— Ersatzteil wählen (optional) —</option>';
   Object.entries(ERSATZTEILE).forEach(([kat, items]) => {
     const og = document.createElement('optgroup');
     og.label = kat;
     items.forEach(item => {
+      const preis = item[fzKat];
       const o = document.createElement('option');
-      o.value = JSON.stringify(item);
-      o.textContent = item.name + ' — ' + item.preis.toLocaleString('de-CH') + ' CHF (' + item.einheit + ')';
+      o.value = JSON.stringify({name: item.name, preis: preis});
+      o.textContent = item.name + ' — ' + preis.toLocaleString('de-CH') + ' CHF';
       og.appendChild(o);
     });
     sel.appendChild(og);
@@ -1436,37 +1392,25 @@ async function renderOffeneRechnungen() {
 
 
 // ══ MFK / FAHRZEUGE ══
-// Supabase-basierte Fahrzeugverwaltung (alle Benutzer sehen alle Fahrzeuge)
-async function getFahrzeuge() {
-  const s = sb();
-  if (s) {
-    const { data } = await s.from('fahrzeuge').select('*').order('erfasst', { ascending: false });
-    return (data || []).map(row => ({
-      id: row.id,
-      kennzeichen: row.kennzeichen,
-      marke: row.marke,
-      modell: row.modell,
-      baujahr: row.baujahr,
-      farbe: row.farbe,
-      vin: row.vin,
-      halter: row.halter || {},
-      mfk: row.mfk || {},
-      gutachten: row.gutachten,
-      eintragung: row.eintragung,
-      bemerkung: row.bemerkung,
-      erfasst: row.erfasst,
-    }));
-  }
+// Lokale Fahrzeug-Daten (localStorage für Demo, Supabase wenn verfügbar)
+function getFahrzeuge() {
   return JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]');
 }
+function saveFahrzeuge(fz) {
+  localStorage.setItem('tch_fahrzeuge', JSON.stringify(fz));
+}
 
-async function saveFahrzeug() {
+function saveFahrzeug() {
   const kz = document.getElementById('fz-kennzeichen').value.trim().toUpperCase();
   const marke = document.getElementById('fz-marke').value.trim();
   const modell = document.getElementById('fz-modell').value.trim();
   if (!kz || !marke) { alert('Kennzeichen und Marke sind Pflicht.'); return; }
 
-  const fzData = {
+  const fahrzeuge = getFahrzeuge();
+  const existing = fahrzeuge.findIndex(f => f.kennzeichen === kz);
+
+  const fz = {
+    id: existing >= 0 ? fahrzeuge[existing].id : Date.now(),
     kennzeichen: kz,
     marke, modell,
     baujahr: document.getElementById('fz-baujahr').value,
@@ -1488,26 +1432,11 @@ async function saveFahrzeug() {
     eintragung: ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'].filter(k=>document.getElementById('fz-ein-'+k)?.checked).join(', '),
     bemerkung: document.getElementById('fz-bemerkung').value.trim(),
     erfasst: new Date().toISOString(),
-    erfasst_von: CU?.email || '',
   };
 
-  const s = sb();
-  if (s) {
-    // Prüfen ob Kennzeichen schon existiert → update oder insert
-    const { data: existing } = await s.from('fahrzeuge').select('id').eq('kennzeichen', kz).maybeSingle();
-    if (existing) {
-      await s.from('fahrzeuge').update(fzData).eq('kennzeichen', kz);
-    } else {
-      await s.from('fahrzeuge').insert(fzData);
-    }
-  } else {
-    // Fallback localStorage
-    const fahrzeuge = JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]');
-    const idx = fahrzeuge.findIndex(f => f.kennzeichen === kz);
-    const fzLocal = { ...fzData, id: idx >= 0 ? fahrzeuge[idx].id : Date.now() };
-    if (idx >= 0) fahrzeuge[idx] = fzLocal; else fahrzeuge.unshift(fzLocal);
-    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fahrzeuge));
-  }
+  if (existing >= 0) { fahrzeuge[existing] = fz; }
+  else { fahrzeuge.unshift(fz); }
+  saveFahrzeuge(fahrzeuge);
 
   // Felder leeren
   ['fz-kennzeichen','fz-marke','fz-modell','fz-baujahr','fz-farbe','fz-vin',
@@ -1518,37 +1447,19 @@ async function saveFahrzeug() {
   document.getElementById('fz-mfk-status').value = 'OK';
   document.getElementById('fz-gutachten').value = '';
 
-  await renderFahrzeuge();
+  renderFahrzeuge();
   alert('✅ Fahrzeug gespeichert!');
 }
 
-async function deleteFahrzeug(id) {
+function deleteFahrzeug(id) {
   if (!confirm('Fahrzeug wirklich löschen?')) return;
-  const s = sb();
-  if (s) {
-    await s.from('fahrzeuge').delete().eq('id', id);
-  } else {
-    const fz = JSON.parse(localStorage.getItem('tch_fahrzeuge') || '[]').filter(f => f.id !== id);
-    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fz));
-  }
-  await renderFahrzeuge();
+  const fz = getFahrzeuge().filter(f => f.id !== id);
+  saveFahrzeuge(fz);
+  renderFahrzeuge();
 }
 
-// Index-basierte Helfer für onclick (vermeidet UUID-Sonderzeichen-Problem)
-async function editFahrzeugByIdx(idx) {
-  const fz = (window._fzCache || [])[idx];
-  if (!fz) return;
-  await editFahrzeug(fz.id);
-}
-async function deleteFahrzeugByIdx(idx) {
-  const fz = (window._fzCache || [])[idx];
-  if (!fz) return;
-  await deleteFahrzeug(fz.id);
-}
-
-async function editFahrzeug(id) {
-  const alle = await getFahrzeuge();
-  const fz = alle.find(f => f.id === id);
+function editFahrzeug(id) {
+  const fz = getFahrzeuge().find(f => f.id === id);
   if (!fz) return;
   document.getElementById('fz-kennzeichen').value = fz.kennzeichen || '';
   document.getElementById('fz-marke').value = fz.marke || '';
@@ -1565,6 +1476,7 @@ async function editFahrzeug(id) {
   document.getElementById('fz-mfk-naechste').value = fz.mfk?.naechste || '';
   document.getElementById('fz-mfk-status').value = fz.mfk?.status || 'OK';
   document.getElementById('fz-gutachten').value = fz.gutachten || '';
+  document.getElementById('fz-eintragung').value = fz.eintragung || '';
   document.getElementById('fz-bemerkung').value = fz.bemerkung || '';
   window.scrollTo(0, 0);
 }
@@ -1594,8 +1506,8 @@ function mfkStatusColor(fz) {
   return '#1A5276';
 }
 
-async function renderFahrzeuge(liste) {
-  const fahrzeuge = liste || await getFahrzeuge();
+function renderFahrzeuge(liste) {
+  const fahrzeuge = liste || getFahrzeuge();
   const el = document.getElementById('fz-liste');
   const stats = document.getElementById('fz-stats');
   if (!el) return;
@@ -1617,10 +1529,7 @@ async function renderFahrzeuge(liste) {
     return;
   }
 
-  // Fahrzeuge global speichern damit onclick-Handler per Index zugreifen können
-  window._fzCache = fahrzeuge;
-
-  el.innerHTML = fahrzeuge.map((fz, idx) => {
+  el.innerHTML = fahrzeuge.map(fz => {
     const halterName = [fz.halter?.vorname, fz.halter?.nachname].filter(Boolean).join(' ') || '—';
     const tage = fz.mfk?.naechste ? Math.floor((new Date(fz.mfk.naechste) - new Date()) / 86400000) : null;
     const isAlert = fz.mfk?.status === 'Nicht bestanden' || fz.mfk?.status === 'Abgelaufen' || (tage !== null && tage < 0);
@@ -1634,8 +1543,8 @@ async function renderFahrzeuge(liste) {
           <div style="font-size:12px;color:#888;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap">${fz.farbe?'🎨 '+fz.farbe:''}${fz.vin?' · VIN: '+fz.vin:''}</div>
         </div>
         ${mfkStatusBadge(fz)}
-        <button onclick="editFahrzeugByIdx(${idx})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✏️</button>
-        <button onclick="deleteFahrzeugByIdx(${idx})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
+        <button onclick="editFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✏️</button>
+        <button onclick="deleteFahrzeug(${fz.id})" style="background:none;border:1.5px solid #DDE;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
         <div style="padding:14px 18px;border-right:1px solid #F0F0F0">
@@ -1661,12 +1570,12 @@ async function renderFahrzeuge(liste) {
   }).join('');
 }
 
-async function sucheFahrzeug() {
+function sucheFahrzeug() {
   const q = document.getElementById('fz-suche')?.value.trim().toLowerCase();
   const el = document.getElementById('fz-suchergebnis');
   if (!q || !el) { if(el) el.innerHTML=''; return; }
   
-  const alle = await getFahrzeuge();
+  const alle = getFahrzeuge();
   const treffer = alle.filter(fz =>
     fz.kennzeichen?.toLowerCase().includes(q) ||
     fz.marke?.toLowerCase().includes(q) ||
@@ -1687,13 +1596,12 @@ async function sucheFahrzeug() {
 }
 
 
-async function updateFahrzeugDropdown() {
+function updateFahrzeugDropdown() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">— Fahrzeug wählen —</option>';
-  const fahrzeuge = await getFahrzeuge();
-  fahrzeuge.forEach(fz => {
+  getFahrzeuge().forEach(fz => {
     const o = document.createElement('option');
     o.value = fz.id;
     o.textContent = fz.kennzeichen + ' — ' + fz.marke + ' ' + (fz.modell||'') + (fz.halter?.nachname ? ' (' + fz.halter.nachname + ')' : '');
@@ -1702,12 +1610,11 @@ async function updateFahrzeugDropdown() {
   sel.value = cur;
 }
 
-async function zeigeAktuelleEintragungen() {
+function zeigeAktuelleEintragungen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   const el = document.getElementById('fz-aktuelle-eintragungen');
   if (!sel?.value || !el) { if(el) el.innerHTML=''; return; }
-  const alle = await getFahrzeuge();
-  const fz = alle.find(f => f.id == sel.value);
+  const fz = getFahrzeuge().find(f => f.id == sel.value);
   if (!fz) return;
   const ein = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
   const gutachtenInfo = fz.gutachten ? `<div style="margin-top:8px;font-size:12px"><span style="color:var(--gray)">Gutachten: </span><span style="background:var(--gold-l);color:var(--gold);padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600">${fz.gutachten}</span></div>` : '';
@@ -1718,15 +1625,16 @@ async function zeigeAktuelleEintragungen() {
     : `<div style="font-size:12px;color:#AAA">Noch keine Eintragungen ${mfkInfo}</div>`) + gutachtenInfo;
 }
 
-async function nachtragen() {
+function nachtragen() {
   const sel = document.getElementById('fz-nachtragen-sel');
   if (!sel?.value) { alert('Bitte zuerst ein Fahrzeug auswählen.'); return; }
   const eintragungKeys = ['felgen','reifen','slick','semislick','rennreifen','strassenreifen','fahrwerk','spoiler','bodykit','breitbau','turbo','motor','auspuff','licht','neon','aero','sonstiges'];
   const eintragungLabels = {felgen:'🔧 Felgen',reifen:'🔄 Andere Reifen',slick:'🏁 Slick',semislick:'🏎️ Semislick',rennreifen:'🏆 Rennreifen',strassenreifen:'🛣️ Strassenreifen',fahrwerk:'⬇️ Fahrwerk / Tieferlegung',spoiler:'💨 Spoiler',bodykit:'🚗 Bodykit',breitbau:'↔️ Breitbau',turbo:'⚡ Turboumbau',motor:'🔩 Motorumbau',auspuff:'💨 Auspuffanlage',licht:'💡 Licht / LED',neon:'🌈 Neon / Unterbodenbeleuchtung',aero:'✈️ Aerodynamik-Teile',sonstiges:'📝 Sonstiges'};
   const neu = eintragungKeys.filter(k => document.getElementById('fz-nt-'+k)?.checked).map(k => eintragungLabels[k]);
   const bem = document.getElementById('fz-nt-bemerkung')?.value.trim();
+  // Alles optional - nur Fahrzeug muss gewählt sein (bereits oben geprüft)
 
-  const fahrzeuge = await getFahrzeuge();
+  const fahrzeuge = getFahrzeuge();
   const idx = fahrzeuge.findIndex(f => f.id == sel.value);
   if (idx < 0) return;
 
@@ -1734,47 +1642,39 @@ async function nachtragen() {
   const alle = [...new Set([...bestehend, ...neu])];
   fahrzeuge[idx].eintragung = alle.join(', ');
   if (bem) fahrzeuge[idx].bemerkung = (fahrzeuge[idx].bemerkung ? fahrzeuge[idx].bemerkung + ' | ' : '') + bem;
+  // Gutachten aktualisieren
   const ntGutachten = document.getElementById('fz-nt-gutachten')?.value;
   if (ntGutachten) fahrzeuge[idx].gutachten = ntGutachten;
+  // MFK Status aktualisieren
   const ntMfkStatus = document.getElementById('fz-nt-mfk-status')?.value;
   if (ntMfkStatus && ntMfkStatus !== '') {
     if (!fahrzeuge[idx].mfk) fahrzeuge[idx].mfk = {};
     fahrzeuge[idx].mfk.status = ntMfkStatus;
   }
 
-  // Supabase Update
-  const s = sb();
-  if (s) {
-    await s.from('fahrzeuge').update({
-      eintragung: fahrzeuge[idx].eintragung,
-      bemerkung: fahrzeuge[idx].bemerkung,
-      gutachten: fahrzeuge[idx].gutachten,
-      mfk: fahrzeuge[idx].mfk,
-    }).eq('id', fahrzeuge[idx].id);
-  } else {
-    localStorage.setItem('tch_fahrzeuge', JSON.stringify(fahrzeuge));
-  }
-
+  saveFahrzeuge(fahrzeuge);
   eintragungKeys.forEach(k => { const el=document.getElementById('fz-nt-'+k); if(el) el.checked=false; });
   const bemEl = document.getElementById('fz-nt-bemerkung'); if(bemEl) bemEl.value='';
   const gtEl = document.getElementById('fz-nt-gutachten'); if(gtEl) gtEl.value='';
   const mfkEl = document.getElementById('fz-nt-mfk-status'); if(mfkEl) mfkEl.value='';
-  await zeigeAktuelleEintragungen();
-  await renderFahrzeuge();
-  const updFz = fahrzeuge[idx];
+  // Keep fahrzeug selected and refresh display
+  zeigeAktuelleEintragungen();
+  renderFahrzeuge();
+  // Show success with updated status
+  const updFz = getFahrzeuge().find(f => f.id == sel.value);
   const statusInfo = updFz?.mfk?.status ? ' · MFK: ' + updFz.mfk.status : '';
   alert('✅ Gespeichert!' + statusInfo);
 }
 
 
 // ══ HALTERABFRAGE ══
-async function halterSuche() {
+function halterSuche() {
   const q = document.getElementById('halter-suche')?.value.trim().toLowerCase();
   const el = document.getElementById('halter-ergebnis');
   const statsEl = document.getElementById('halter-stats');
   if (!el) return;
 
-  const alle = await getFahrzeuge();
+  const alle = getFahrzeuge();
 
   // Stats
   const faellig = alle.filter(f => {
