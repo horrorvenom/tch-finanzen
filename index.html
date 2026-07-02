@@ -571,21 +571,20 @@ const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstatt
 const isCEO = () => CU?.role==='ceo';
 
 async function applyPermissions() {
-  if (isCEO()) return;
+  if (isCEO()) return; // CEO sieht immer alles, kein Tab-Reset
   const allTabs = ['einnahmen','ausgaben','mitarbeiter','auswertung','monat','mfk','halter'];
-  // Load fresh from Supabase or local
   let perms = ['einnahmen','mfk','halter']; // default
   try {
     const mas = await dbGet('mitarbeiter');
     const m = mas.find(x => x.email === CU?.email);
     if (m?.permissions) perms = JSON.parse(m.permissions);
   } catch(e) {}
-  // Apply to nav tabs
+  // Apply visibility to nav tabs
   allTabs.forEach(tab => {
     const navTab = document.querySelector('[onclick*="showTab(\''+tab+'\')"]');
     if (navTab) navTab.style.display = perms.includes(tab) ? '' : 'none';
   });
-  // If current active tab is now hidden, go to dashboard
+  // Only redirect if current active tab is one the user has NO permission for
   const activeSection = document.querySelector('.section.active');
   if (activeSection) {
     const tabId = activeSection.id.replace('tab-','');
@@ -669,6 +668,9 @@ async function renderAll(){
   renderKonto();
   await renderOffeneRechnungen();
   await Promise.all([renderMitarbeiter(),renderEinnahmen(),renderAusgaben(),renderGewinn(),renderAuswertung()]);
+  // Also render monat if that tab is active
+  const activeTab = document.querySelector('.section.active')?.id?.replace('tab-','');
+  if(activeTab==='monat') renderMonat();
 }
 
 
@@ -793,7 +795,12 @@ function showTab(t){
   if(sec) sec.classList.add('active');
   const navTab = event.target.closest('.nav-tab');
   if(navTab) navTab.classList.add('active');
-  renderAll();
+  // Render only what's needed for this tab (avoid applyPermissions resetting the tab)
+  renderKonto();
+  if(t==='dashboard'){renderOffeneRechnungen();renderEinnahmen();renderAusgaben();renderGewinn();}
+  if(t==='einnahmen')renderEinnahmen();
+  if(t==='ausgaben')renderAusgaben();
+  if(t==='mitarbeiter')renderMitarbeiter();
   if(t==='auswertung')renderAuswertung();
   if(t==='monat')renderMonat();
   if(t==='mfk')renderFahrzeuge();
