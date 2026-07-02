@@ -204,9 +204,30 @@ tbody td{padding:8px 9px;}
         </div>
         <div style="font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">🛠️ Dienstleistungen auswählen (Mehrfachauswahl möglich)</div>
         <div id="ein-preisliste" style="max-height:280px;overflow-y:auto;border:1.5px solid #DDE;border-radius:8px;padding:10px;background:#FAFAFA"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 14px;background:#D5F5E3;border-radius:8px">
-          <span style="font-size:12px;font-weight:600;color:#1E8449">Ausgewählt: <span id="ein-anzahl-gewaehlt">0</span> Position(en)</span>
-          <span style="font-size:16px;font-weight:800;color:#1E8449">Total: <span id="ein-total-gewaehlt">0.00</span> CHF</span>
+
+        <div style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em">💸 Rabatt</label>
+            <span id="ein-rabatt-anzeige" style="font-size:14px;font-weight:800;color:#C0392B">0%</span>
+          </div>
+          <input type="range" id="ein-rabatt" min="0" max="100" step="5" value="0" oninput="onRabattChange()" style="width:100%;accent-color:#C0392B;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:#AAA;margin-top:2px">
+            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;padding:12px 14px;background:#D5F5E3;border-radius:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;font-weight:600;color:#1E8449">Ausgewählt: <span id="ein-anzahl-gewaehlt">0</span> Position(en)</span>
+            <span style="font-size:13px;color:#5D8A6E">Zwischensumme: <span id="ein-zwischensumme">0.00</span> CHF</span>
+          </div>
+          <div id="ein-rabatt-zeile" style="display:none;justify-content:flex-end;font-size:12px;color:#C0392B;font-weight:600">
+            − <span id="ein-rabatt-betrag">0.00</span> CHF Rabatt
+          </div>
+          <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:6px;border-top:1px solid #A9DCB8;padding-top:6px;margin-top:2px">
+            <span style="font-size:12px;color:#1E8449;font-weight:600">Total:</span>
+            <span style="font-size:18px;font-weight:800;color:#1E8449"><span id="ein-total-gewaehlt">0.00</span> CHF</span>
+          </div>
         </div>
         <div style="font-size:11px;color:var(--gray);margin-top:6px">💡 Mehrere Positionen anklicken — Beschreibung und Betrag werden automatisch summiert und in die Felder unten übernommen.</div>
       </div>
@@ -752,7 +773,7 @@ async function startApp(){
   document.getElementById('konto-edit').style.display=isCEO()?'flex':'none';
   document.getElementById('ein-datum').valueAsDate=new Date();
   await applyPermissions();
-  buildErsatzteileDropdown();
+  buildEinPreisliste();
   // Echtzeit-Updates für Zugriffsrechte
   startRealtimePermissions();
   document.getElementById('aus-datum').valueAsDate=new Date();
@@ -929,6 +950,10 @@ async function addEinnahme(){
   await dbIns('einnahmen',r);
   ['ein-desc','ein-kunde','ein-betrag'].forEach(id=>document.getElementById(id).value='');
   einSelectedItems = {};
+  const rabattEl = document.getElementById('ein-rabatt');
+  if (rabattEl) rabattEl.value = 0;
+  const rabattAnzeige = document.getElementById('ein-rabatt-anzeige');
+  if (rabattAnzeige) rabattAnzeige.textContent = '0%';
   buildEinPreisliste();
   updateEinSelectionSummary();
   renderAll();
@@ -1202,19 +1227,43 @@ function toggleEinItem(evt, key, name, preis) {
   updateEinSelectionSummary();
 }
 
+function onRabattChange() {
+  const val = document.getElementById('ein-rabatt')?.value || 0;
+  const anzeige = document.getElementById('ein-rabatt-anzeige');
+  if (anzeige) anzeige.textContent = val + '%';
+  updateEinSelectionSummary();
+}
+
 function updateEinSelectionSummary() {
   const items = Object.values(einSelectedItems);
-  const total = items.reduce((s,i) => s + i.preis, 0);
+  const zwischensumme = items.reduce((s,i) => s + i.preis, 0);
   const count = items.length;
+  const rabattProzent = parseFloat(document.getElementById('ein-rabatt')?.value) || 0;
+  const rabattBetrag = zwischensumme * rabattProzent / 100;
+  const total = zwischensumme - rabattBetrag;
 
   const anzahlEl = document.getElementById('ein-anzahl-gewaehlt');
+  const zwischenEl = document.getElementById('ein-zwischensumme');
   const totalEl = document.getElementById('ein-total-gewaehlt');
+  const rabattZeile = document.getElementById('ein-rabatt-zeile');
+  const rabattBetragEl = document.getElementById('ein-rabatt-betrag');
+
   if (anzahlEl) anzahlEl.textContent = count;
+  if (zwischenEl) zwischenEl.textContent = zwischensumme.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
   if (totalEl) totalEl.textContent = total.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  if (rabattProzent > 0) {
+    if (rabattZeile) rabattZeile.style.display = 'flex';
+    if (rabattBetragEl) rabattBetragEl.textContent = rabattBetrag.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
+  } else {
+    if (rabattZeile) rabattZeile.style.display = 'none';
+  }
 
   // Auto-fill beschreibung and betrag
   if (count > 0) {
-    document.getElementById('ein-desc').value = items.map(i => i.name).join(' + ');
+    let desc = items.map(i => i.name).join(' + ');
+    if (rabattProzent > 0) desc += ' (−' + rabattProzent + '%)';
+    document.getElementById('ein-desc').value = desc;
     document.getElementById('ein-betrag').value = total.toFixed(2);
     document.getElementById('ein-kat').value = 'Werkstatt';
   }
