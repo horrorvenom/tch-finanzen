@@ -147,7 +147,6 @@ tbody td{padding:8px 9px;}
       </div>
       <div id="konto-edit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="number" id="konto-inp" step="0.01" placeholder="Betrag CHF" style="border:1.5px solid var(--blue);border-radius:7px;padding:7px 10px;font-size:14px;font-weight:700;width:140px;color:var(--blue);outline:none;">
-        <input type="text" id="konto-notiz-inp" placeholder="Notiz" style="border:1.5px solid #BCD;border-radius:7px;padding:7px 10px;font-size:12px;width:160px;outline:none;">
         <button class="btn btn-blue btn-sm" onclick="saveKonto()">💾 Speichern</button>
       </div>
     </div>
@@ -843,16 +842,14 @@ async function loadKonto(){
 }
 async function saveKonto(){
   const v=parseFloat(document.getElementById('konto-inp').value)||0;
-  const n=document.getElementById('konto-notiz-inp').value.trim();
-  L.konto=v;L.kNotiz=n;sl();
-  const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:v,notiz:n});
+  L.konto=v;sl();
+  const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:v,notiz:L.kNotiz||''});
   renderKonto();
 }
 function renderKonto(){
   document.getElementById('konto-val').textContent=fmt(L.konto);
   document.getElementById('konto-notiz-lbl').textContent=L.kNotiz||'';
   document.getElementById('konto-inp').value=L.konto||0;
-  document.getElementById('konto-notiz-inp').value=L.kNotiz||'';
 }
 
 // ══ MITARBEITER ══
