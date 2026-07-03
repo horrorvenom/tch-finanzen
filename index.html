@@ -308,6 +308,26 @@ tbody td{padding:8px 9px;}
 
   <!-- AUSWERTUNG -->
   <div id="tab-auswertung" class="section">
+    <div class="card" style="padding:14px 18px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0"><label>Zeitraum</label>
+          <select id="ausw-zeitraum" onchange="onAuswZeitraumChange()" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;outline:none">
+            <option value="alle">Gesamter Zeitraum</option>
+            <option value="monat">Bestimmter Monat</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0" id="ausw-monat-wrap">
+          <label>Monat</label>
+          <select id="ausw-monat-sel" onchange="renderAuswertung();vollAnalyse();" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;outline:none">
+            <option value="0">Januar</option><option value="1">Februar</option><option value="2">März</option><option value="3">April</option><option value="4">Mai</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">August</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Dezember</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0" id="ausw-jahr-wrap">
+          <label>Jahr</label>
+          <input type="number" id="ausw-jahr-sel" min="2020" max="2099" onchange="renderAuswertung();vollAnalyse();" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;width:82px;outline:none">
+        </div>
+      </div>
+    </div>
     <div class="card"><div class="card-title">📈 Mitarbeiter-Auswertung</div><div class="ma-grid" id="ma-auswertung"><div style="color:#AAA;padding:14px">Keine Daten</div></div></div>
     <div class="card">
       <div class="card-title">📊 Einnahmen nach Kategorie</div>
@@ -799,7 +819,7 @@ function showTab(t){
   if(t==='einnahmen')renderEinnahmen();
   if(t==='ausgaben')renderAusgaben();
   if(t==='mitarbeiter')renderMitarbeiter();
-  if(t==='auswertung')renderAuswertung();
+  if(t==='auswertung'){initAuswZeitraum();renderAuswertung();}
   if(t==='monat')renderMonat();
   if(t==='mfk')renderFahrzeuge();
   if(t==='halter')halterSuche();
@@ -1098,8 +1118,48 @@ async function renderGewinn(){
 }
 
 // ══ AUSWERTUNG ══
+// ══ ZEITRAUM-FILTER (Auswertung) ══
+function initAuswZeitraum(){
+  const monatEl = document.getElementById('ausw-monat-sel');
+  const jahrEl = document.getElementById('ausw-jahr-sel');
+  const monatWrap = document.getElementById('ausw-monat-wrap');
+  const jahrWrap = document.getElementById('ausw-jahr-wrap');
+  if(monatEl && !monatEl.dataset.init){monatEl.value=new Date().getMonth();monatEl.dataset.init='1';}
+  if(jahrEl && !jahrEl.value){jahrEl.value=new Date().getFullYear();}
+  // Standardmässig "Gesamter Zeitraum" -> Monat/Jahr ausblenden
+  const zeitraum = document.getElementById('ausw-zeitraum')?.value || 'alle';
+  const zeigen = zeitraum === 'monat';
+  if(monatWrap) monatWrap.style.display = zeigen ? '' : 'none';
+  if(jahrWrap) jahrWrap.style.display = zeigen ? '' : 'none';
+}
+
+function onAuswZeitraumChange(){
+  const zeitraum = document.getElementById('ausw-zeitraum')?.value;
+  const monatWrap = document.getElementById('ausw-monat-wrap');
+  const jahrWrap = document.getElementById('ausw-jahr-wrap');
+  const zeigen = zeitraum === 'monat';
+  if(monatWrap) monatWrap.style.display = zeigen ? '' : 'none';
+  if(jahrWrap) jahrWrap.style.display = zeigen ? '' : 'none';
+  renderAuswertung();
+  vollAnalyse();
+}
+
+function filterNachAuswZeitraum(liste){
+  const zeitraum = document.getElementById('ausw-zeitraum')?.value;
+  if(zeitraum !== 'monat') return liste;
+  const m = parseInt(document.getElementById('ausw-monat-sel')?.value ?? new Date().getMonth());
+  const y = parseInt(document.getElementById('ausw-jahr-sel')?.value ?? new Date().getFullYear());
+  return liste.filter(x => {
+    if(!x.datum) return false;
+    const d = new Date(x.datum);
+    return d.getMonth()===m && d.getFullYear()===y;
+  });
+}
+
 async function renderAuswertung(){
-  const mas=await dbGet('mitarbeiter');const ein=await dbGet('einnahmen');
+  const mas=await dbGet('mitarbeiter');
+  const allEin=await dbGet('einnahmen');
+  const ein=filterNachAuswZeitraum(allEin);
   const grid=document.getElementById('ma-auswertung');
   grid.innerHTML=!mas.length?'<div style="color:#AAA;padding:14px">Keine Mitarbeiter</div>':mas.map(m=>{
     const at=ein.filter(e=>e.mitarbeiter===m.name);
@@ -1489,10 +1549,21 @@ async function lokalAnalyse(typ) {
 }
 
 async function vollAnalyse() {
-  const ein = await dbGet('einnahmen');
-  const aus = await dbGet('ausgaben');
+  const allEin = await dbGet('einnahmen');
+  const allAus = await dbGet('ausgaben');
   const mas = await dbGet('mitarbeiter');
   const el = document.getElementById('voll-analyse');
+  const ein = filterNachAuswZeitraum(allEin);
+  const aus = filterNachAuswZeitraum(allAus);
+
+  const zeitraum = document.getElementById('ausw-zeitraum')?.value;
+  let zeitraumLabel = 'Gesamter Zeitraum';
+  if(zeitraum === 'monat'){
+    const m = parseInt(document.getElementById('ausw-monat-sel')?.value ?? new Date().getMonth());
+    const y = parseInt(document.getElementById('ausw-jahr-sel')?.value ?? new Date().getFullYear());
+    const MN=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'][m];
+    zeitraumLabel = MN + ' ' + y;
+  }
 
   const tE=ein.reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
@@ -1516,6 +1587,10 @@ async function vollAnalyse() {
   }).filter(p=>p.prov>0).sort((a,b)=>b.prov-a.prov);
 
   el.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">📅 Zeitraum</div>
+      <div style="font-size:13px;font-weight:700;color:#EEE">${zeitraumLabel}</div>
+    </div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💰 Finanzen</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
