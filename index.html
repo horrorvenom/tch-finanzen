@@ -1098,7 +1098,7 @@ async function renderMonat(){
   const allE=await dbGet('einnahmen');const allA=await dbGet('ausgaben');const mas=await dbGet('mitarbeiter');
   const ein=allE.filter(e=>{if(!e.datum)return false;const d=new Date(e.datum);return d.getMonth()===m&&d.getFullYear()===y;});
   const aus=allA.filter(a=>{if(!a.datum)return false;const d=new Date(a.datum);return d.getMonth()===m&&d.getFullYear()===y;});
-  const tE=ein.reduce((s,e)=>s+e.betrag,0);
+  const tE=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
   const tL=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
   const tP=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
@@ -1120,7 +1120,7 @@ async function renderMonat(){
   // Lohn & Provision pro Mitarbeiter
   let sL=0,sP=0,sA=0;
   const rows=mas.map(ma=>{
-    const mE=ein.filter(e=>e.mitarbeiter===ma.name).reduce((s,e)=>s+e.betrag,0);
+    const mE=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
     const mEBez2=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);const p=mEBez2*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
     sL+=l;sP+=p;sA+=a;
     const c=rc(ma.rang);
@@ -1143,7 +1143,7 @@ async function renderMonat(){
 // ══ KI ══
 async function buildCtx(){
   const ein=await dbGet('einnahmen');const aus=await dbGet('ausgaben');const mas=await dbGet('mitarbeiter');
-  const tE=ein.reduce((s,e)=>s+e.betrag,0),tA=aus.reduce((s,a)=>s+a.betrag,0);
+  const tE=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0),tA=aus.reduce((s,a)=>s+a.betrag,0);
   return `KI-Finanzassistent der Firma TCH (Abschlepp & Werkstatt, Schweiz). Antworte auf Deutsch, präzise.
 Einnahmen: ${fmt(tE)} | Ausgaben: ${fmt(tA)} | Gewinn: ${fmt(tE-tA)} | Konto: ${fmt(L.konto)}
 Mitarbeiter: ${mas.map(m=>{const me=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);return `${m.name}(${m.rang},Prov ${m.provision||0}%,Lohn ${fmt(m.lohn||0)},Ein ${fmt(me)})`;}).join('; ')||'keine'}
@@ -1467,8 +1467,8 @@ async function vollAnalyse() {
   const tE=ein.reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
   const tEBez=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
-  const tEAus=ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
-  const gv=tE-tA;
+  const tEAus=ein.filter(e=>!istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
+  const gv=tEBez-tA;
   const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
   const tLohn=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
 
