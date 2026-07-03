@@ -957,6 +957,34 @@ async function addEinnahme(){
   const r={datum:document.getElementById('ein-datum').value,beschreibung:document.getElementById('ein-desc').value.trim(),kunde:document.getElementById('ein-kunde').value.trim(),kategorie:document.getElementById('ein-kat').value,mitarbeiter:document.getElementById('ein-ma').value,betrag:parseFloat(document.getElementById('ein-betrag').value)||0,bezahlt:document.getElementById('ein-bez').value};
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
   await dbIns('einnahmen',r);
+
+  // Automatische Ausgabe für Service Materialien mit Einkaufspreis
+  const materialPositionen = Object.values(einSelectedItems).filter(it => it.einkaufspreis > 0);
+  if (materialPositionen.length) {
+    let einkaufTotal = 0;
+    const beschreibungTeile = [];
+    materialPositionen.forEach(it => {
+      const menge = it.menge || 1;
+      einkaufTotal += it.einkaufspreis * menge;
+      beschreibungTeile.push(`${it.name} ${menge}${it.einheit==='Stück'?'x':(it.einheit?' '+it.einheit:'')}`);
+    });
+    if (einkaufTotal > 0) {
+      const ausgabeRow = {
+        datum: r.datum,
+        beschreibung: 'Materialkosten: ' + beschreibungTeile.join(', '),
+        mitarbeiter: r.mitarbeiter,
+        lieferant: '',
+        kategorie: 'Ersatzteile',
+        betrag: einkaufTotal,
+        bezahlt: 'Ja'
+      };
+      await dbIns('ausgaben', ausgabeRow);
+      L.konto = (L.konto||0) - einkaufTotal; sl();
+      const s = sb();
+      if (s) await s.from('settings').upsert({key:'konto', value:L.konto, notiz:'Materialkosten: '+r.mitarbeiter});
+    }
+  }
+
   ['ein-desc','ein-kunde','ein-betrag'].forEach(id=>document.getElementById(id).value='');
   einSelectedItems = {};
   const rabattEl = document.getElementById('ein-rabatt');
@@ -1198,13 +1226,13 @@ const ABSCHLEPPDIENST = {
 
 const ERSATZTEILE = {
   "Service Materialien": [
-    {name:"Motoröl", preisLux:250, preisSport:200, preisStd:150, einheit:"Liter"},
-    {name:"Kupplung (Kit inkl. Druckplatte & Lager)", preisLux:1900, preisSport:1350, preisStd:850},
-    {name:"Luftfilter (Hochleistungsfilter)", preisLux:220, preisSport:150, preisStd:65},
-    {name:"Zündkerzen", preisLux:150, preisSport:100, preisStd:50, einheit:"Stück"},
-    {name:"Bremsbeläge (Teile & Einbau)", preisLux:620, preisSport:450, preisStd:250, einheit:"Achse"},
-    {name:"Reifen", preisLux:520, preisSport:350, preisStd:160, einheit:"Stück"},
-    {name:"Federung (Teile & Einbau)", preisLux:1200, preisSport:900, preisStd:520, einheit:"Achse"},
+    {name:"Motoröl", preisLux:250, preisSport:200, preisStd:150, einheit:"Liter", einkaufspreis:75},
+    {name:"Kupplung (Kit inkl. Druckplatte & Lager)", preisLux:1900, preisSport:1350, preisStd:850, einkaufspreis:425},
+    {name:"Luftfilter (Hochleistungsfilter)", preisLux:220, preisSport:150, preisStd:65, einkaufspreis:33},
+    {name:"Zündkerzen", preisLux:150, preisSport:100, preisStd:50, einheit:"Stück", einkaufspreis:25},
+    {name:"Bremsbeläge (Teile & Einbau)", preisLux:620, preisSport:450, preisStd:250, einheit:"Achse", einkaufspreis:125},
+    {name:"Reifen", preisLux:520, preisSport:350, preisStd:160, einheit:"Stück", einkaufspreis:80},
+    {name:"Federung (Teile & Einbau)", preisLux:1200, preisSport:900, preisStd:520, einheit:"Achse", einkaufspreis:260},
   ],
   "Fahrzeugkontrolle & MFK": [
     {name:"Motorkontrolle / Diagnose (inkl. Fehlerspeicher)", preisLux:190, preisSport:160, preisStd:120},
@@ -1260,7 +1288,7 @@ function buildEinPreisliste() {
       const key = kat + '|' + item.name;
       const hatMenge = !!item.einheit;
       const bestehendeMenge = einSelectedItems[key]?.menge || 1;
-      itemMap[itemIndex] = {key, name: item.name, preisEinzel, einheit: item.einheit};
+      itemMap[itemIndex] = {key, name: item.name, preisEinzel, einheit: item.einheit, einkaufspreis: item.einkaufspreis||0};
       const isSelected = !!einSelectedItems[key];
 
       const wrapper = document.createElement('div');
@@ -1322,12 +1350,12 @@ function buildEinPreisliste() {
   });
 }
 function toggleEinItemByIdx(itemData) {
-  const {key, name, preisEinzel, einheit} = itemData;
+  const {key, name, preisEinzel, einheit, einkaufspreis} = itemData;
   if (einSelectedItems[key]) {
     delete einSelectedItems[key];
   } else {
     const menge = 1;
-    einSelectedItems[key] = {name, preis: preisEinzel * menge, preisEinzel, menge, einheit};
+    einSelectedItems[key] = {name, preis: preisEinzel * menge, preisEinzel, menge, einheit, einkaufspreis};
   }
   buildEinPreisliste();
   updateEinSelectionSummary();
