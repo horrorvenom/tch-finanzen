@@ -1997,10 +1997,11 @@ function zeigeAktuelleEintragungen() {
   const ein = fz.eintragung ? fz.eintragung.split(', ').filter(Boolean) : [];
   const gutachtenInfo = fz.gutachten ? `<div style="margin-top:8px;font-size:12px"><span style="color:var(--gray)">Gutachten: </span><span style="background:var(--gold-l);color:var(--gold);padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600">${fz.gutachten}</span></div>` : '';
   const mfkInfo = fz.mfk?.status ? `<span style="margin-left:8px;font-size:12px;color:var(--gray)">MFK: <strong>${fz.mfk.status}</strong></span>` : '';
+  const bemerkungInfo = fz.bemerkung ? `<div style="margin-top:8px;font-size:12px;color:#888;font-style:italic">💬 ${fz.bemerkung}</div>` : '';
   el.innerHTML = (ein.length
     ? `<div style="font-size:12px;color:var(--gray);margin-bottom:6px">Aktuelle Eintragungen: ${mfkInfo}</div>
        <div style="display:flex;flex-wrap:wrap;gap:6px">${ein.map(e=>`<span style="background:var(--purple-l);color:var(--purple);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:600">${e}</span>`).join('')}</div>`
-    : `<div style="font-size:12px;color:#AAA">Noch keine Eintragungen ${mfkInfo}</div>`) + gutachtenInfo;
+    : `<div style="font-size:12px;color:#AAA">Noch keine Eintragungen ${mfkInfo}</div>`) + gutachtenInfo + bemerkungInfo;
 }
 
 function nachtragen() {
