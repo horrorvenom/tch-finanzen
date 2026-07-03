@@ -565,6 +565,7 @@ let selRole = 'ceo';
 // ══ HELPERS ══
 const fmt = n => Number(n||0).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2})+' CHF';
 const fmtD = d => { if(!d)return '—'; try{return new Date(d).toLocaleDateString('de-CH');}catch(e){return d;} };
+const istBezahlt = v => v===true || v==='Ja' || v==='true' || v===1 || v==='1';
 const rc = r => ({'CEO':'#C0392B','Abschleppdienst-Leitung':'#B7770D','Werkstattleiter':'#1A5276','Abschlepper-Mechaniker':'#6C3483','Lehrling':'#1E8449'}[r]||'#555');
 const isCEO = () => CU?.role==='ceo';
 
@@ -906,7 +907,7 @@ async function renderMitarbeiter(){
   if(!mas.length){list.innerHTML='<div style="color:#AAA;padding:14px;text-align:center">Keine Mitarbeiter</div>';return;}
   list.innerHTML=mas.map(m=>{
     const mE=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);
-    const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+    const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
     const p=mEBez*(m.provision||0)/100;
     const c=rc(m.rang);
     const perms=m.permissions?JSON.parse(m.permissions):['einnahmen','mfk','halter'];
@@ -972,7 +973,7 @@ async function addEinnahme(){
 async function togEin(id){
   const e=(await dbGet('einnahmen')).find(x=>x.id===id);
   if(!e) return;
-  const wirdBezahlt = e.bezahlt!=='Ja'; // true wenn Nein->Ja wechselt
+  const wirdBezahlt = !istBezahlt(e.bezahlt); // true wenn Nein->Ja wechselt
   await dbUpd('einnahmen',id,{bezahlt: wirdBezahlt?'Ja':'Nein'});
   // Firmenkonto automatisch anpassen
   const betrag = parseFloat(e.betrag)||0;
@@ -987,15 +988,15 @@ async function delEin(id){await dbDel('einnahmen',id);renderAll();}
 async function renderEinnahmen(){
   const ein=await dbGet('einnahmen');
   const mas=await dbGet('mitarbeiter');
-  document.getElementById('stat-ein').textContent=fmt(ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0));
+  document.getElementById('stat-ein').textContent=fmt(ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0));
   const recent=document.getElementById('recent-ein');
   const tbody=document.getElementById('ein-tbody');
   if(!ein.length){recent.innerHTML='<tr><td colspan="5" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';tbody.innerHTML='<tr><td colspan="10" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';return;}
-  recent.innerHTML=ein.slice(0,5).map(e=>`<tr><td>${fmtD(e.datum)}</td><td>${e.beschreibung}</td><td>${e.mitarbeiter||'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td><button class="toggle-btn ${e.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${e.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td></tr>`).join('');
+  recent.innerHTML=ein.slice(0,5).map(e=>`<tr><td>${fmtD(e.datum)}</td><td>${e.beschreibung}</td><td>${e.mitarbeiter||'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td><button class="toggle-btn ${istBezahlt(e.bezahlt)?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${istBezahlt(e.bezahlt)?'✓ Ja':'✗ Nein'}</button></td></tr>`).join('');
   tbody.innerHTML=ein.map((e,i)=>{
     const ma=mas.find(m=>m.name===e.mitarbeiter);
-    const p=ma&&ma.provision?(e.bezahlt==='Ja'?fmt(e.betrag*ma.provision/100)+` (${ma.provision}%)`:('<span style="color:#AAA;font-size:10px">ausstehend</span>')):'—';
-    return `<tr><td style="color:#AAA">${ein.length-i}</td><td>${fmtD(e.datum)}</td><td><strong>${e.beschreibung}</strong></td><td>${e.kunde||'—'}</td><td>${e.kategorie?`<span class="badge badge-blue">${e.kategorie}</span>`:'—'}</td><td>${e.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${ma?rc(ma.rang):'#999'}"></span>${e.mitarbeiter}</span>`:'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td style="color:var(--gold);font-size:10px">${p}</td><td><button class="toggle-btn ${e.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${e.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delEin(${e.id})">✕</button></td></tr>`;
+    const p=ma&&ma.provision?(istBezahlt(e.bezahlt)?fmt(e.betrag*ma.provision/100)+` (${ma.provision}%)`:('<span style="color:#AAA;font-size:10px">ausstehend</span>')):'—';
+    return `<tr><td style="color:#AAA">${ein.length-i}</td><td>${fmtD(e.datum)}</td><td><strong>${e.beschreibung}</strong></td><td>${e.kunde||'—'}</td><td>${e.kategorie?`<span class="badge badge-blue">${e.kategorie}</span>`:'—'}</td><td>${e.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${ma?rc(ma.rang):'#999'}"></span>${e.mitarbeiter}</span>`:'—'}</td><td style="color:var(--green);font-weight:600">${fmt(e.betrag)}</td><td style="color:var(--gold);font-size:10px">${p}</td><td><button class="toggle-btn ${istBezahlt(e.bezahlt)?'toggle-ja':'toggle-nein'}" onclick="togEin(${e.id})">${istBezahlt(e.bezahlt)?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delEin(${e.id})">✕</button></td></tr>`;
   }).join('');
 }
 
@@ -1025,7 +1026,7 @@ async function addAusgabe(){
     return;
   }
   // Firmenkonto abziehen wenn bezahlt
-  if(r.bezahlt==='Ja'){
+  if(istBezahlt(r.bezahlt)){
     L.konto=(L.konto||0)-r.betrag;sl();
     const s=sb();if(s)await s.from('settings').upsert({key:'konto',value:L.konto,notiz:'Ausgabe: '+r.beschreibung});
   }
@@ -1039,7 +1040,7 @@ async function togAus(id){
   const aus=await dbGet('ausgaben');
   const a=aus.find(x=>x.id===id);
   if(!a)return;
-  const newStatus=a.bezahlt==='Ja'?'Nein':'Ja';
+  const newStatus=istBezahlt(a.bezahlt)?'Nein':'Ja';
   await dbUpd('ausgaben',id,{bezahlt:newStatus});
   // Konto anpassen
   if(newStatus==='Ja'){
@@ -1061,13 +1062,13 @@ async function renderAusgaben(){
   if(!aus.length){tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Ausgaben</td></tr>';return;}
   tbody.innerHTML=aus.map((a,i)=>{
     const maA=mas.find(m=>m.name===a.mitarbeiter);const cA=maA?rc(maA.rang):'#999';
-    return `<tr><td style="color:#AAA">${aus.length-i}</td><td>${fmtD(a.datum)}</td><td><strong>${a.beschreibung}</strong></td><td>${a.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${cA}"></span>${a.mitarbeiter}</span>`:'—'}</td><td>${a.lieferant||'—'}</td><td>${a.kategorie?`<span class="badge badge-red">${a.kategorie}</span>`:'—'}</td><td style="color:var(--red);font-weight:600">${fmt(a.betrag)}</td><td><button class="toggle-btn ${a.bezahlt==='Ja'?'toggle-ja':'toggle-nein'}" onclick="togAus(${a.id})">${a.bezahlt==='Ja'?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delAus(${a.id})">✕</button></td></tr>`;
+    return `<tr><td style="color:#AAA">${aus.length-i}</td><td>${fmtD(a.datum)}</td><td><strong>${a.beschreibung}</strong></td><td>${a.mitarbeiter?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:${cA}"></span>${a.mitarbeiter}</span>`:'—'}</td><td>${a.lieferant||'—'}</td><td>${a.kategorie?`<span class="badge badge-red">${a.kategorie}</span>`:'—'}</td><td style="color:var(--red);font-weight:600">${fmt(a.betrag)}</td><td><button class="toggle-btn ${istBezahlt(a.bezahlt)?'toggle-ja':'toggle-nein'}" onclick="togAus(${a.id})">${istBezahlt(a.bezahlt)?'✓ Ja':'✗ Nein'}</button></td><td><button class="btn btn-ghost btn-sm" onclick="delAus(${a.id})">✕</button></td></tr>`;
   }).join('');
 }
 
 async function renderGewinn(){
   const ein=await dbGet('einnahmen');const aus=await dbGet('ausgaben');
-  const g=ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0)-aus.reduce((s,a)=>s+a.betrag,0);
+  const g=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0)-aus.reduce((s,a)=>s+a.betrag,0);
   const el=document.getElementById('stat-gv');el.textContent=fmt(g);el.style.color=g>=0?'var(--green)':'var(--red)';
 }
 
@@ -1078,8 +1079,8 @@ async function renderAuswertung(){
   grid.innerHTML=!mas.length?'<div style="color:#AAA;padding:14px">Keine Mitarbeiter</div>':mas.map(m=>{
     const at=ein.filter(e=>e.mitarbeiter===m.name);
     const tot=at.reduce((s,e)=>s+e.betrag,0);
-    const bez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
-    const totBez=at.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);const p=totBez*(m.provision||0)/100;
+    const bez=at.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
+    const totBez=at.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);const p=totBez*(m.provision||0)/100;
     const c=rc(m.rang);
     const ini=m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     return `<div class="ma-card"><div class="ma-card-header" style="background:${c}"><div class="ma-avatar">${ini}</div><div><div style="font-weight:700;font-size:13px">${m.name}</div><div style="font-size:10px;opacity:.85">${m.rang}</div></div></div><div class="ma-card-body"><div class="ma-stat"><span class="ma-stat-label">Aufträge</span><span class="ma-stat-value">${at.length}</span></div><div class="ma-stat"><span class="ma-stat-label">Einnahmen</span><span class="ma-stat-value" style="color:var(--green)">${fmt(tot)}</span></div><div class="ma-stat"><span class="ma-stat-label">Provision (${m.provision||0}%)</span><span class="ma-stat-value" style="color:var(--gold)">${fmt(p)}</span></div><div class="ma-stat"><span class="ma-stat-label">Bezahlt</span><span class="ma-stat-value" style="color:var(--green)">${fmt(bez)}</span></div><div class="ma-stat"><span class="ma-stat-label">Ausstehend</span><span class="ma-stat-value" style="color:var(--red)">${fmt(tot-bez)}</span></div>${m.lohn?`<div class="ma-stat"><span class="ma-stat-label">Monatslohn</span><span class="ma-stat-value">${fmt(m.lohn)}</span></div>`:''}</div></div>`;
@@ -1100,7 +1101,7 @@ async function renderMonat(){
   const tE=ein.reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
   const tL=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
-  const tP=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
+  const tP=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
   const netto=tE-tA-tL-tP;
 
   document.getElementById('monat-stats').innerHTML=`
@@ -1120,7 +1121,7 @@ async function renderMonat(){
   let sL=0,sP=0,sA=0;
   const rows=mas.map(ma=>{
     const mE=ein.filter(e=>e.mitarbeiter===ma.name).reduce((s,e)=>s+e.betrag,0);
-    const mEBez2=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);const p=mEBez2*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
+    const mEBez2=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);const p=mEBez2*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
     sL+=l;sP+=p;sA+=a;
     const c=rc(ma.rang);
     return `<tr><td><strong>${ma.name}</strong></td><td><span style="background:${c};color:white;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${ma.rang}</span></td><td style="color:var(--green);font-weight:600">${fmt(mE)}</td><td><span class="badge badge-gold">${ma.provision||0}%</span></td><td style="color:var(--gold);font-weight:700">${fmt(p)}</td><td style="color:var(--blue);font-weight:600">${fmt(l)}</td><td style="font-weight:700;font-size:13px">${fmt(a)}</td></tr>`;
@@ -1402,7 +1403,7 @@ async function lokalAnalyse(typ) {
   
   const tE = ein.reduce((s,e)=>s+e.betrag,0);
   const tA = aus.reduce((s,a)=>s+a.betrag,0);
-  const tEBez = ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+  const tEBez = ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
   const tEAus = ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
   const gv = tE - tA;
 
@@ -1421,7 +1422,7 @@ async function lokalAnalyse(typ) {
     if(!mas.length){el.innerHTML='<span style="color:#AAA">Keine Mitarbeiter erfasst.</span>';return;}
     el.innerHTML = mas.map(m=>{
       const mE=ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0);
-      const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+      const mEBez=ein.filter(e=>e.mitarbeiter===m.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
       const prov=mEBez*(m.provision||0)/100;
       const c=rc(m.rang);
       return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #3A3A3C">
@@ -1452,7 +1453,7 @@ async function lokalAnalyse(typ) {
         <span style="color:#AAA;width:16px">${i+1}.</span>
         <span style="flex:1">${e.beschreibung}${e.mitarbeiter?' · '+e.mitarbeiter:''}</span>
         <span style="color:#6ee08a;font-weight:600">${fmt(e.betrag)}</span>
-        <span class="badge ${e.bezahlt==='Ja'?'badge-green':'badge-red'}">${e.bezahlt}</span>
+        <span class="badge ${istBezahlt(e.bezahlt)?'badge-green':'badge-red'}">${istBezahlt(e.bezahlt)?'Ja':'Nein'}</span>
       </div>`).join('');
   }
 }
@@ -1465,10 +1466,10 @@ async function vollAnalyse() {
 
   const tE=ein.reduce((s,e)=>s+e.betrag,0);
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
-  const tEBez=ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0);
+  const tEBez=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
   const tEAus=ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
   const gv=tE-tA;
-  const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&e.bezahlt==='Ja').reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
+  const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
   const tLohn=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
 
   // Kategorie auswertung
