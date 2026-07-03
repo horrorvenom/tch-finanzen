@@ -1808,7 +1808,7 @@ function saveFahrzeug() {
     },
     gutachten: document.getElementById('fz-gutachten').value,
     eintragung: ['felgen', 'reifen', 'fahrwerk', 'spoiler', 'bodykit', 'breitbau', 'turbo', 'motor', 'auspuff', 'licht', 'neon', 'aero', 'dtc', 'teilegutachten', 'sonstiges'].filter(k=>document.getElementById('fz-ein-'+k)?.checked).join(', '),
-    bemerkung: document.getElementById('fz-bemerkung').value.trim(),
+    bemerkung: [document.getElementById('fz-bemerkung').value.trim(), document.getElementById('fz-ein-bemerkung')?.value.trim()].filter(Boolean).join(' | '),
     erfasst: new Date().toISOString(),
   };
 
