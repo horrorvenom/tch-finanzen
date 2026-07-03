@@ -969,7 +969,19 @@ async function addEinnahme(){
   updateEinSelectionSummary();
   renderAll();
 }
-async function togEin(id){const e=(await dbGet('einnahmen')).find(x=>x.id===id);if(e)await dbUpd('einnahmen',id,{bezahlt:e.bezahlt==='Ja'?'Nein':'Ja'});renderAll();}
+async function togEin(id){
+  const e=(await dbGet('einnahmen')).find(x=>x.id===id);
+  if(!e) return;
+  const wirdBezahlt = e.bezahlt!=='Ja'; // true wenn Nein->Ja wechselt
+  await dbUpd('einnahmen',id,{bezahlt: wirdBezahlt?'Ja':'Nein'});
+  // Firmenkonto automatisch anpassen
+  const betrag = parseFloat(e.betrag)||0;
+  L.konto = (parseFloat(L.konto)||0) + (wirdBezahlt ? betrag : -betrag);
+  sl();
+  const s=sb();
+  if(s) await s.from('settings').upsert({key:'konto',value:L.konto,notiz:L.kNotiz});
+  renderAll();
+}
 async function delEin(id){await dbDel('einnahmen',id);renderAll();}
 
 async function renderEinnahmen(){
