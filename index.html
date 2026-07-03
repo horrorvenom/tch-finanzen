@@ -1874,12 +1874,14 @@ function halterSuche() {
     return s === 'Nicht bestanden' || s === 'Abgelaufen' || (tage !== null && tage < 0);
   });
   const bald = alle.filter(f => {
+    if (faellig.includes(f)) return false; // nicht doppelt zählen
     const tage = f.mfk?.naechste ? Math.floor((new Date(f.mfk.naechste) - new Date()) / 86400000) : null;
     return tage !== null && tage >= 0 && tage <= 30;
   });
+  const ok = alle.filter(f => !faellig.includes(f) && !bald.includes(f));
   if (statsEl) statsEl.innerHTML = `
     <div class="stat blue"><div class="stat-label">Fahrzeuge total</div><div class="stat-value">${alle.length}</div></div>
-    <div class="stat green"><div class="stat-label">MFK OK</div><div class="stat-value">${alle.filter(f=>f.mfk?.status==='OK').length}</div></div>
+    <div class="stat green"><div class="stat-label">MFK OK</div><div class="stat-value">${ok.length}</div></div>
     <div class="stat gold"><div class="stat-label">Bald fällig</div><div class="stat-value">${bald.length}</div></div>
     <div class="stat red"><div class="stat-label">Überfällig</div><div class="stat-value">${faellig.length}</div></div>`;
 
