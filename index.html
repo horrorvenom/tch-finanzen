@@ -978,6 +978,13 @@ async function addEinnahme(){
   if(!r.beschreibung||!r.betrag){alert('Beschreibung und Betrag sind Pflicht.');return;}
   await dbIns('einnahmen',r);
 
+  // Firmenkonto erhöhen, wenn die Einnahme direkt als bezahlt erfasst wird
+  if(istBezahlt(r.bezahlt)){
+    L.konto = (L.konto||0) + r.betrag; sl();
+    const sKonto = sb();
+    if(sKonto) await sKonto.from('settings').upsert({key:'konto', value:L.konto, notiz:'Einnahme: '+r.beschreibung});
+  }
+
   // Automatische Ausgabe für Service Materialien mit Einkaufspreis
   const materialPositionen = Object.values(einSelectedItems).filter(it => it.einkaufspreis > 0);
   if (materialPositionen.length) {
@@ -1470,18 +1477,6 @@ function updateEinSelectionSummary() {
   // Update save button total display
   const btnTotalEl = document.getElementById('ein-btn-total');
   if (btnTotalEl) btnTotalEl.textContent = total.toLocaleString('de-CH', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-async function addAusgabeAndDeductKonto(row) {
-  // Konto abziehen wenn Ersatzteil ausgewählt
-  const sel = document.getElementById('aus-ersatzteil');
-  if (sel && sel.value && istBezahlt(row.bezahlt)) {
-    L.konto = (L.konto || 0) - row.betrag;
-    sl();
-    const s = sb();
-    if (s) await s.from('settings').upsert({key:'konto', value:L.konto, notiz:'Auto-Abzug: '+row.beschreibung});
-    renderKonto();
-  }
 }
 
 // ══ LOKALE ANALYSE (ohne KI) ══
