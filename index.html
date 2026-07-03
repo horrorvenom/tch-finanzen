@@ -362,7 +362,7 @@ tbody td{padding:8px 9px;}
     <div class="card">
       <div class="card-title">👥 Lohn- & Provisionsabrechnung pro Mitarbeiter</div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Mitarbeiter</th><th>Rang</th><th>Einnahmen Monat</th><th>Provision %</th><th>Provision CHF</th><th>Monatslohn</th><th>Total Auszahlung</th></tr></thead>
+        <thead><tr><th>Mitarbeiter</th><th>Rang</th><th>Einnahmen Monat</th><th>Provision %</th><th>Provision CHF</th><th>Monatslohn</th><th>Total Auszahlung</th><th>Aktion</th></tr></thead>
         <tbody id="lohn-tbody"><tr><td colspan="7" style="color:#AAA;text-align:center;padding:14px">—</td></tr></tbody>
       </table></div>
       <div id="lohn-sum" style="margin-top:10px"></div>
@@ -731,6 +731,7 @@ async function doLogin() {
       await s.from('profiles').upsert({id:data.user.id,name:ma.data?.name||email,email,role:email===CEO_EMAIL?'ceo':'ma'});
     }
     await loadKonto();
+    await loadProvisionAusgezahlt();
   } else {
     // Demo
     if(email===CEO_EMAIL){CU={email,role:'ceo',name:'Momo Sinclair'};}
@@ -1183,6 +1184,45 @@ async function renderAuswertung(){
 }
 
 // ══ MONATSBERICHT ══
+// ══ PROVISIONSAUSZAHLUNG ══
+let provisionAusgezahlt = {}; // key: "mitarbeiter|monat|jahr" -> true
+
+async function loadProvisionAusgezahlt(){
+  const s = sb();
+  if(s){
+    const {data} = await s.from('settings').select('*').eq('key','provision_auszahlungen').single();
+    if(data && data.notiz){
+      try { provisionAusgezahlt = JSON.parse(data.notiz); } catch(e){ provisionAusgezahlt = {}; }
+    }
+  }
+}
+
+async function saveProvisionAusgezahlt(){
+  const s = sb();
+  if(s) await s.from('settings').upsert({key:'provision_auszahlungen', value:0, notiz: JSON.stringify(provisionAusgezahlt)});
+}
+
+function provisionKey(maName, m, y){
+  return maName + '|' + m + '|' + y;
+}
+
+async function auszahlenProvision(maName, betrag, m, y, MN){
+  if(betrag <= 0){ alert('Keine Provision zum Auszahlen.'); return; }
+  const key = provisionKey(maName, m, y);
+  if(provisionAusgezahlt[key]){ alert('Provision für diesen Monat wurde bereits ausgezahlt.'); return; }
+  if(!confirm(`Provision von ${fmt(betrag)} für ${maName} (${MN} ${y}) jetzt auszahlen? Der Betrag wird vom Firmenkonto abgezogen.`)) return;
+
+  provisionAusgezahlt[key] = true;
+  await saveProvisionAusgezahlt();
+
+  L.konto = (L.konto||0) - betrag; sl();
+  const s = sb();
+  if(s) await s.from('settings').upsert({key:'konto', value:L.konto, notiz:'Provision ausgezahlt: '+maName+' ('+MN+' '+y+')'});
+
+  renderMonat();
+  renderKonto();
+}
+
 async function renderMonat(){
   const selEl=document.getElementById('monat-sel');
   const jahrEl=document.getElementById('jahr-sel');
@@ -1221,11 +1261,18 @@ async function renderMonat(){
     const mEBez2=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);const p=mEBez2*(ma.provision||0)/100;const l=ma.lohn||0;const a=l+p;
     sL+=l;sP+=p;sA+=a;
     const c=rc(ma.rang);
-    return `<tr><td><strong>${ma.name}</strong></td><td><span style="background:${c};color:white;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${ma.rang}</span></td><td style="color:var(--green);font-weight:600">${fmt(mE)}</td><td><span class="badge badge-gold">${ma.provision||0}%</span></td><td style="color:var(--gold);font-weight:700">${fmt(p)}</td><td style="color:var(--blue);font-weight:600">${fmt(l)}</td><td style="font-weight:700;font-size:13px">${fmt(a)}</td></tr>`;
+    const key = provisionKey(ma.name, m, y);
+    const istAusgezahlt = !!provisionAusgezahlt[key];
+    const aktionBtn = p<=0
+      ? '<span style="color:#AAA;font-size:11px">—</span>'
+      : istAusgezahlt
+        ? '<span style="background:#D5F5E3;color:#1E8449;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:600">✓ Ausgezahlt</span>'
+        : `<button class="btn btn-sm" style="background:#6C3483;color:white" onclick="auszahlenProvision('${ma.name.replace(/'/g,"\\'")}', ${p}, ${m}, ${y}, '${MN}')">💸 Auszahlen</button>`;
+    return `<tr><td><strong>${ma.name}</strong></td><td><span style="background:${c};color:white;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${ma.rang}</span></td><td style="color:var(--green);font-weight:600">${fmt(mE)}</td><td><span class="badge badge-gold">${ma.provision||0}%</span></td><td style="color:var(--gold);font-weight:700">${fmt(p)}</td><td style="color:var(--blue);font-weight:600">${fmt(l)}</td><td style="font-weight:700;font-size:13px">${fmt(a)}</td><td>${aktionBtn}</td></tr>`;
   });
   document.getElementById('lohn-tbody').innerHTML=mas.length
-    ?(rows.join('')+`<tr style="background:#F8F9FA;border-top:2px solid #1C1C1E"><td colspan="2" style="padding:9px;font-weight:700">TOTAL</td><td></td><td></td><td style="color:var(--gold);font-weight:700">${fmt(sP)}</td><td style="color:var(--blue);font-weight:700">${fmt(sL)}</td><td style="color:var(--red);font-weight:700;font-size:13px">${fmt(sA)}</td></tr>`)
-    :'<tr><td colspan="7" style="color:#AAA;text-align:center;padding:14px">Keine Mitarbeiter</td></tr>';
+    ?(rows.join('')+`<tr style="background:#F8F9FA;border-top:2px solid #1C1C1E"><td colspan="2" style="padding:9px;font-weight:700">TOTAL</td><td></td><td></td><td style="color:var(--gold);font-weight:700">${fmt(sP)}</td><td style="color:var(--blue);font-weight:700">${fmt(sL)}</td><td style="color:var(--red);font-weight:700;font-size:13px">${fmt(sA)}</td><td></td></tr>`)
+    :'<tr><td colspan="8" style="color:#AAA;text-align:center;padding:14px">Keine Mitarbeiter</td></tr>';
 
   document.getElementById('lohn-sum').innerHTML=mas.length?`<div style="background:var(--dark);color:white;border-radius:8px;padding:10px 15px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-top:8px"><span>Löhne: <strong style="color:var(--gold)">${fmt(sL)}</strong></span><span>Provisionen: <strong style="color:#A569BD">${fmt(sP)}</strong></span><span style="font-size:14px">Gesamte Auszahlung: <strong style="color:#F0B27A;font-size:15px">${fmt(sA)}</strong></span></div>`:'';
 
