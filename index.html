@@ -1227,6 +1227,22 @@ async function auszahlenProvision(maName, betrag, m, y, MN){
   renderKonto();
 }
 
+async function resetProvisionAuszahlung(maName, betrag, m, y, MN){
+  const key = provisionKey(maName, m, y);
+  if(!provisionAusgezahlt[key]){ alert('Diese Provision wurde noch nicht ausgezahlt.'); return; }
+  if(!confirm(`Auszahlung von ${fmt(betrag)} für ${maName} (${MN} ${y}) zurücksetzen? Der Betrag wird wieder zum Firmenkonto hinzugefügt.`)) return;
+
+  delete provisionAusgezahlt[key];
+  await saveProvisionAusgezahlt();
+
+  L.konto = (L.konto||0) + betrag; sl();
+  const s = sb();
+  if(s) await s.from('settings').upsert({key:'konto', value:L.konto, notiz:'Auszahlung zurückgesetzt: '+maName+' ('+MN+' '+y+')'});
+
+  renderMonat();
+  renderKonto();
+}
+
 async function renderMonat(){
   const selEl=document.getElementById('monat-sel');
   const jahrEl=document.getElementById('jahr-sel');
@@ -1294,7 +1310,8 @@ async function renderMonat(){
           <div style="display:flex;align-items:center;gap:12px">
             <div style="font-size:18px;font-weight:800;color:var(--gold)">${fmt(p)}</div>
             ${istAusgezahlt
-              ? '<span style="background:#D5F5E3;color:#1E8449;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700">✓ Ausgezahlt</span>'
+              ? `<span style="background:#D5F5E3;color:#1E8449;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700">✓ Ausgezahlt</span>
+                 <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="resetProvisionAuszahlung('${ma.name.replace(/'/g,"\\'")}', ${p}, ${m}, ${y}, '${MN}')" title="Auszahlung zurücksetzen">↺ Zurücksetzen</button>`
               : `<button class="btn" style="background:#6C3483;color:white;padding:9px 18px;font-size:13px" onclick="auszahlenProvision('${ma.name.replace(/'/g,"\\'")}', ${p}, ${m}, ${y}, '${MN}')">💸 Auszahlen</button>`}
           </div>
         </div>`;
