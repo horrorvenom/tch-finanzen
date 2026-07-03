@@ -2151,6 +2151,7 @@ function renderHalterListe(fahrzeuge, el, q) {
           ${fz.mfk?.datum?`<div style="font-size:12px;color:#888;margin-bottom:3px">Letzte: <strong style="color:#1C1C1E">${fmtD(fz.mfk.datum)}</strong></div>`:''}
           ${fz.mfk?.naechste?`<div style="font-size:12px;margin-bottom:5px">Nächste: <strong style="color:${mfkStatusColor(fz)}">${fmtD(fz.mfk.naechste)}${tage!==null?' ('+tage+' Tage)':''}</strong></div>`:''}
           ${fz.gutachten?`<span style="background:#FFF8E1;color:#D4A017;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:700">📋 ${fz.gutachten}</span>`:''}
+          ${fz.bemerkung?`<div style="font-size:11px;color:#888;margin-top:6px;font-style:italic">💬 ${highlight(fz.bemerkung, q)}</div>`:''}
         </div>
 
         <!-- Eintragungen -->
