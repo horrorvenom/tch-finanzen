@@ -1473,9 +1473,8 @@ async function vollAnalyse() {
   const tA=aus.reduce((s,a)=>s+a.betrag,0);
   const tEBez=ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
   const tEAus=ein.filter(e=>!istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
-  const gv=tEBez-tA;
   const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
-  const tLohn=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
+  const gv=tEBez-tA-tProv;
 
   // Kategorie auswertung (nur bezahlte Einnahmen)
   const kats={};
@@ -1485,13 +1484,19 @@ async function vollAnalyse() {
   // Top mitarbeiter (nur bezahlte Einnahmen)
   const maStats=mas.map(m=>({name:m.name,rang:m.rang,tot:ein.filter(e=>e.mitarbeiter===m.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0)})).sort((a,b)=>b.tot-a.tot);
 
+  // Provision pro Mitarbeiter (nur bezahlte Einnahmen)
+  const provStats=mas.map(m=>{
+    const meBez=ein.filter(e=>e.mitarbeiter===m.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
+    return {name:m.name,prov:meBez*(m.provision||0)/100};
+  }).filter(p=>p.prov>0).sort((a,b)=>b.prov-a.prov);
+
   el.innerHTML = `
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💰 Finanzen</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
         <div style="background:#1E844922;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#6ee08a">Einnahmen (bezahlt)</div><div style="font-size:13px;font-weight:700;color:#6ee08a">${fmt(tEBez)}</div></div>
         <div style="background:#C0392B22;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#f97c7c">Ausgaben</div><div style="font-size:13px;font-weight:700;color:#f97c7c">${fmt(tA)}</div></div>
-        <div style="background:#ffffff11;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#AAA">Netto</div><div style="font-size:13px;font-weight:700;color:${gv>=0?'#6ee08a':'#f97c7c'}">${fmt(gv)}</div></div>
+        <div style="background:#ffffff11;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#AAA">Netto (nach Provision)</div><div style="font-size:13px;font-weight:700;color:${gv>=0?'#6ee08a':'#f97c7c'}">${fmt(gv)}</div></div>
       </div>
     </div>
     <div style="margin-bottom:14px">
@@ -1507,8 +1512,8 @@ async function vollAnalyse() {
       ${maStats.map((m,i)=>`<div style="display:flex;gap:8px;font-size:12px;padding:3px 0"><span style="color:#AAA">${i+1}.</span><span style="flex:1">${m.name}</span><strong style="color:#6ee08a">${fmt(m.tot)}</strong></div>`).join('')}
     </div>`:''}
     <div>
-      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💼 Lohn & Provision</div>
-      <div style="font-size:12px">Löhne/Mt.: <strong style="color:#7cc4f9">${fmt(tLohn)}</strong> · Provisionen (bezahlt): <strong style="color:#ffc94d">${fmt(tProv)}</strong></div>
+      <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💼 Provision pro Mitarbeiter</div>
+      ${provStats.length?provStats.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">${p.name}<strong style="color:#ffc94d">${fmt(p.prov)}</strong></div>`).join(''):'<div style="font-size:12px;color:#AAA">Keine Provisionen</div>'}
     </div>`;
 }
 
