@@ -334,7 +334,7 @@ tbody td{padding:8px 9px;}
           </select>
         </div>
         <div class="form-group" style="margin:0"><label>Jahr</label>
-          <input type="number" id="jahr-sel" value="2026" min="2020" max="2099" onchange="renderMonat()" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;width:82px;outline:none">
+          <input type="number" id="jahr-sel" min="2020" max="2099" onchange="renderMonat()" style="border:1.5px solid #DDE;border-radius:7px;padding:7px 10px;font-size:13px;width:82px;outline:none">
         </div>
       </div>
     </div>
@@ -1092,8 +1092,13 @@ async function renderAuswertung(){
 
 // ══ MONATSBERICHT ══
 async function renderMonat(){
-  const m=parseInt(document.getElementById('monat-sel')?.value??new Date().getMonth());
-  const y=parseInt(document.getElementById('jahr-sel')?.value??new Date().getFullYear());
+  const selEl=document.getElementById('monat-sel');
+  const jahrEl=document.getElementById('jahr-sel');
+  // Beim ersten Aufruf: aktuellen Monat/Jahr setzen falls noch nicht initialisiert
+  if(selEl && !selEl.dataset.init){selEl.value=new Date().getMonth();selEl.dataset.init='1';}
+  if(jahrEl && !jahrEl.value){jahrEl.value=new Date().getFullYear();}
+  const m=parseInt(selEl?.value??new Date().getMonth());
+  const y=parseInt(jahrEl?.value??new Date().getFullYear());
   const MN=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'][m];
   const allE=await dbGet('einnahmen');const allA=await dbGet('ausgaben');const mas=await dbGet('mitarbeiter');
   const ein=allE.filter(e=>{if(!e.datum)return false;const d=new Date(e.datum);return d.getMonth()===m&&d.getFullYear()===y;});
