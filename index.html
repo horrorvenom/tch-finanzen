@@ -987,7 +987,7 @@ async function delEin(id){await dbDel('einnahmen',id);renderAll();}
 async function renderEinnahmen(){
   const ein=await dbGet('einnahmen');
   const mas=await dbGet('mitarbeiter');
-  document.getElementById('stat-ein').textContent=fmt(ein.reduce((s,e)=>s+e.betrag,0));
+  document.getElementById('stat-ein').textContent=fmt(ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0));
   const recent=document.getElementById('recent-ein');
   const tbody=document.getElementById('ein-tbody');
   if(!ein.length){recent.innerHTML='<tr><td colspan="5" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';tbody.innerHTML='<tr><td colspan="10" style="color:#AAA;text-align:center;padding:14px">Keine Einnahmen</td></tr>';return;}
@@ -1067,7 +1067,7 @@ async function renderAusgaben(){
 
 async function renderGewinn(){
   const ein=await dbGet('einnahmen');const aus=await dbGet('ausgaben');
-  const g=ein.reduce((s,e)=>s+e.betrag,0)-aus.reduce((s,a)=>s+a.betrag,0);
+  const g=ein.filter(e=>e.bezahlt==='Ja').reduce((s,e)=>s+e.betrag,0)-aus.reduce((s,a)=>s+a.betrag,0);
   const el=document.getElementById('stat-gv');el.textContent=fmt(g);el.style.color=g>=0?'var(--green)':'var(--red)';
 }
 
