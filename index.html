@@ -1390,7 +1390,7 @@ function updateEinSelectionSummary() {
 async function addAusgabeAndDeductKonto(row) {
   // Konto abziehen wenn Ersatzteil ausgewählt
   const sel = document.getElementById('aus-ersatzteil');
-  if (sel && sel.value && row.bezahlt === 'Ja') {
+  if (sel && sel.value && istBezahlt(row.bezahlt)) {
     L.konto = (L.konto || 0) - row.betrag;
     sl();
     const s = sb();
@@ -1409,8 +1409,8 @@ async function lokalAnalyse(typ) {
   const tE = ein.reduce((s,e)=>s+e.betrag,0);
   const tA = aus.reduce((s,a)=>s+a.betrag,0);
   const tEBez = ein.filter(e=>istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
-  const tEAus = ein.filter(e=>e.bezahlt==='Nein').reduce((s,e)=>s+e.betrag,0);
-  const gv = tE - tA;
+  const tEAus = ein.filter(e=>!istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0);
+  const gv = tEBez - tA;
 
   if(typ==='finanzen') {
     el.innerHTML = `
@@ -1441,7 +1441,7 @@ async function lokalAnalyse(typ) {
   }
 
   if(typ==='ausstehend') {
-    const ausst = ein.filter(e=>e.bezahlt==='Nein');
+    const ausst = ein.filter(e=>!istBezahlt(e.bezahlt));
     if(!ausst.length){el.innerHTML='<span style="color:#6ee08a">✅ Alle Rechnungen sind bezahlt!</span>';return;}
     el.innerHTML = `<div style="color:#ffc94d;margin-bottom:8px;font-weight:600">${ausst.length} ausstehende Rechnungen — Total: ${fmt(tEAus)}</div>` +
       ausst.slice(0,8).map(e=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #3A3A3C;font-size:12px">
@@ -1477,19 +1477,19 @@ async function vollAnalyse() {
   const tProv=mas.reduce((s,ma)=>{const meBez=ein.filter(e=>e.mitarbeiter===ma.name&&istBezahlt(e.bezahlt)).reduce((ss,e)=>ss+e.betrag,0);return s+meBez*(ma.provision||0)/100;},0);
   const tLohn=mas.reduce((s,ma)=>s+(ma.lohn||0),0);
 
-  // Kategorie auswertung
+  // Kategorie auswertung (nur bezahlte Einnahmen)
   const kats={};
-  ein.forEach(e=>{const k=e.kategorie||'Sonstiges';if(!kats[k])kats[k]=0;kats[k]+=e.betrag;});
+  ein.filter(e=>istBezahlt(e.bezahlt)).forEach(e=>{const k=e.kategorie||'Sonstiges';if(!kats[k])kats[k]=0;kats[k]+=e.betrag;});
   const topKat=Object.entries(kats).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
-  // Top mitarbeiter
-  const maStats=mas.map(m=>({name:m.name,rang:m.rang,tot:ein.filter(e=>e.mitarbeiter===m.name).reduce((s,e)=>s+e.betrag,0)})).sort((a,b)=>b.tot-a.tot);
+  // Top mitarbeiter (nur bezahlte Einnahmen)
+  const maStats=mas.map(m=>({name:m.name,rang:m.rang,tot:ein.filter(e=>e.mitarbeiter===m.name&&istBezahlt(e.bezahlt)).reduce((s,e)=>s+e.betrag,0)})).sort((a,b)=>b.tot-a.tot);
 
   el.innerHTML = `
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:#ffc94d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">💰 Finanzen</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-        <div style="background:#1E844922;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#6ee08a">Einnahmen</div><div style="font-size:13px;font-weight:700;color:#6ee08a">${fmt(tE)}</div></div>
+        <div style="background:#1E844922;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#6ee08a">Einnahmen (bezahlt)</div><div style="font-size:13px;font-weight:700;color:#6ee08a">${fmt(tEBez)}</div></div>
         <div style="background:#C0392B22;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#f97c7c">Ausgaben</div><div style="font-size:13px;font-weight:700;color:#f97c7c">${fmt(tA)}</div></div>
         <div style="background:#ffffff11;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#AAA">Netto</div><div style="font-size:13px;font-weight:700;color:${gv>=0?'#6ee08a':'#f97c7c'}">${fmt(gv)}</div></div>
       </div>
@@ -1519,7 +1519,7 @@ async function renderOffeneRechnungen() {
   const tot = document.getElementById('offen-total');
   if (!el) return;
   const ein = await dbGet('einnahmen');
-  const offen = ein.filter(e => e.bezahlt === 'Nein').sort((a,b) => new Date(a.datum) - new Date(b.datum));
+  const offen = ein.filter(e => !istBezahlt(e.bezahlt)).sort((a,b) => new Date(a.datum) - new Date(b.datum));
   const totalOffen = offen.reduce((s,e) => s + e.betrag, 0);
   const ueberfaellig = offen.filter(e => {
     const tage = e.datum ? Math.floor((new Date() - new Date(e.datum)) / 86400000) : 0;
